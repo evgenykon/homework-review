@@ -73,8 +73,6 @@ onMounted(async () => {
       },
     )
 
-    console.log('[yandex] init result', result)
-
     if (result.status === 'error') {
       throw new Error(`Яндекс SDK: ${result.code ?? 'unknown error'}`)
     }
@@ -82,28 +80,7 @@ onMounted(async () => {
     setTimeout(() => {
       const container = document.getElementById('yandex-button')
 
-      if (!container) {
-        return
-      }
-
-      const child = container.firstElementChild as HTMLElement | null
-      const style = child ? getComputedStyle(child) : null
-      const rect = child?.getBoundingClientRect()
-
-      console.log('[yandex] container', {
-        childCount: container.childElementCount,
-        containerHeight: container.getBoundingClientRect().height,
-        childTag: child?.tagName,
-        childWidth: rect?.width,
-        childHeight: rect?.height,
-        display: style?.display,
-        visibility: style?.visibility,
-        opacity: style?.opacity,
-        html: container.innerHTML.slice(0, 300),
-      })
-
-      if (container.childElementCount === 0) {
-        console.warn('[yandex] button not rendered')
+      if (container && container.childElementCount === 0) {
         showFallback.value = true
       }
     }, 3000)

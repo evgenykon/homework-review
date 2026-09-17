@@ -39,11 +39,20 @@
         <li v-for="room in rooms" :key="room.id">
           <NuxtLink
             :to="`/sessions/${room.id}`"
-            class="flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-white/5"
+            class="flex items-center justify-between gap-3 rounded-md px-3 py-2 transition-colors hover:bg-white/5"
           >
-            <span class="text-gray-100">{{ room.name }}</span>
-            <span class="text-xs text-gray-500">
-              <ClientOnly>{{ formatDate(room.createdAt) }}</ClientOnly>
+            <span class="truncate text-gray-100">{{ room.name }}</span>
+            <span class="flex shrink-0 items-center gap-2">
+              <span
+                v-if="room.status"
+                class="rounded-full px-2 py-0.5 text-xs"
+                :class="reviewStatusClasses[room.status]"
+              >
+                {{ reviewStatusLabels[room.status] }}
+              </span>
+              <span class="text-xs text-gray-500">
+                <ClientOnly>{{ formatDate(room.createdAt) }}</ClientOnly>
+              </span>
             </span>
           </NuxtLink>
         </li>
@@ -127,6 +136,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ReviewStatus } from '~/composables/useRoom'
+
 type Child = {
   id: string
   name: string
@@ -137,6 +148,7 @@ type Child = {
 type ChatSession = {
   id: string
   name: string
+  status: ReviewStatus
   childId: string
   parentId: string
   createdAt: string

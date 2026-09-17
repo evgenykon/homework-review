@@ -53,6 +53,7 @@
             :style="{ width: `${displayWidth}px`, height: `${displayHeight}px` }"
           >
             <img
+              ref="imageEl"
               :src="imageUrl"
               alt=""
               class="h-full w-full select-none"
@@ -100,6 +101,7 @@ const emit = defineEmits<{
 }>()
 
 const viewportEl = ref<HTMLElement | null>(null)
+const imageEl = ref<HTMLImageElement | null>(null)
 const viewportSize = reactive({ width: 0, height: 0 })
 const naturalSize = reactive({ width: 0, height: 0 })
 const zoom = ref(1)
@@ -150,8 +152,6 @@ const resetView = () => {
   imageError.value = false
 }
 
-watch(() => props.currentPage?.id, resetView)
-
 watch(viewportEl, (el, _previous, onCleanup) => {
   if (!el) {
     return
@@ -179,6 +179,27 @@ const onImageLoad = (event: Event) => {
 const onImageError = () => {
   imageError.value = true
 }
+
+const syncNaturalSize = () => {
+  const image = imageEl.value
+
+  if (image && image.complete && image.naturalWidth > 0) {
+    naturalSize.width = image.naturalWidth
+    naturalSize.height = image.naturalHeight
+    imageError.value = false
+  }
+}
+
+onMounted(syncNaturalSize)
+
+watch(
+  () => props.currentPage?.id,
+  async () => {
+    resetView()
+    await nextTick()
+    syncNaturalSize()
+  },
+)
 
 const onWheel = (event: WheelEvent) => {
   zoom.value = clamp(zoom.value * (event.deltaY < 0 ? 1.1 : 1 / 1.1), 0.2, 8)

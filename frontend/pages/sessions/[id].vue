@@ -1,15 +1,26 @@
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <header class="flex h-14 shrink-0 items-center justify-between border-b border-gray-800 px-4">
+    <header class="flex h-14 shrink-0 items-center gap-3 border-b border-gray-800 px-4">
       <NuxtLink
         to="/dashboard"
         class="shrink-0 text-sm text-gray-400 transition-colors hover:text-gray-200"
       >
         Назад
       </NuxtLink>
-      <span class="truncate px-4 text-sm font-medium text-gray-200">
-        {{ session?.name ?? 'Комната' }}
-      </span>
+
+      <div class="flex min-w-0 flex-1 items-center justify-center gap-2">
+        <span class="truncate text-sm font-medium text-gray-200">
+          {{ session?.name ?? 'Комната' }}
+        </span>
+        <span
+          v-if="session"
+          class="shrink-0 rounded-full px-2 py-0.5 text-xs"
+          :class="statusClass"
+        >
+          {{ statusLabel }}
+        </span>
+      </div>
+
       <span class="w-10 shrink-0" />
     </header>
 
@@ -41,6 +52,7 @@
           :pages="pages"
           :current-page-id="currentPageId"
           :drawing-enabled="drawingEnabled"
+          :can-review="user?.type === 'parent'"
           :backend-origin="backendOrigin"
           @pick-files="fileInput?.click()"
           @capture="cameraInput?.click()"
@@ -48,6 +60,7 @@
           @select-page="selectPage"
           @delete-page="deletePage"
           @toggle-chat="chatOpen = true"
+          @review="reviewOpen = true"
         />
       </div>
 
@@ -86,6 +99,46 @@
       @close="chatOpen = false"
       @send="sendMessage"
     />
+
+    <div
+      v-if="reviewOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      @click.self="reviewOpen = false"
+    >
+      <div class="w-full max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
+        <h3 class="text-lg font-semibold text-gray-100">
+          Review
+        </h3>
+        <p class="mt-1 text-sm text-gray-400">
+          Выберите результат проверки.
+        </p>
+        <div class="mt-5 flex flex-col gap-2">
+          <button
+            type="button"
+            class="w-full rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-yellow-500 disabled:opacity-60"
+            :disabled="reviewing"
+            @click="submitReview('REVIEWED')"
+          >
+            Есть замечания
+          </button>
+          <button
+            type="button"
+            class="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-60"
+            :disabled="reviewing"
+            @click="submitReview('APPROVED')"
+          >
+            Одобрено
+          </button>
+          <button
+            type="button"
+            class="mt-1 text-sm text-gray-400 transition-colors hover:text-gray-200"
+            @click="reviewOpen = false"
+          >
+            Отмена
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -112,6 +165,7 @@ const {
   deletePage,
   addStroke,
   undoLastStroke,
+  review,
 } = useRoom(sessionId)
 
 await load()
@@ -127,6 +181,27 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
 
 const canUndo = computed(() => (currentPage.value?.strokes.length ?? 0) > 0)
+
+const statusLabel = computed(() =>
+  session.value ? reviewStatusLabels[session.value.status] : '',
+)
+const statusClass = computed(() =>
+  session.value ? reviewStatusClasses[session.value.status] : '',
+)
+
+const reviewOpen = ref(false)
+const reviewing = ref(false)
+
+const submitReview = async (result: 'REVIEWED' | 'APPROVED') => {
+  reviewing.value = true
+
+  try {
+    await review(result)
+    reviewOpen.value = false
+  } finally {
+    reviewing.value = false
+  }
+}
 
 onMounted(connect)
 

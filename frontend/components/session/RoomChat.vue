@@ -5,28 +5,43 @@
         Сообщений пока нет.
       </p>
 
-      <div
-        v-for="message in messages"
-        :key="message.id"
-        class="flex"
-        :class="message.senderId === currentUserId ? 'justify-end' : 'justify-start'"
-      >
-        <div
-          class="max-w-[80%] rounded-lg px-3 py-2"
-          :class="
-            message.senderId === currentUserId
-              ? 'bg-gray-100 text-gray-900'
-              : 'bg-gray-800 text-gray-100'
-          "
+      <template v-for="(message, index) in messages" :key="message.id">
+        <p
+          v-if="startsNewDay(index)"
+          class="py-1 text-center text-xs font-medium text-gray-500"
         >
-          <p class="whitespace-pre-wrap break-words text-sm">
-            {{ message.body }}
-          </p>
-          <p class="mt-1 text-right text-[10px] text-gray-500">
-            <ClientOnly>{{ formatTime(message.createdAt) }}</ClientOnly>
-          </p>
+          {{ formatDayLabel(message.createdAt) }}
+        </p>
+
+        <p
+          v-if="message.system"
+          class="py-1 text-center text-xs text-gray-500"
+        >
+          {{ message.body }}
+        </p>
+
+        <div
+          v-else
+          class="flex"
+          :class="message.senderId === currentUserId ? 'justify-end' : 'justify-start'"
+        >
+          <div
+            class="max-w-[80%] rounded-lg px-3 py-2"
+            :class="
+              message.senderId === currentUserId
+                ? 'bg-gray-100 text-gray-900'
+                : 'bg-gray-800 text-gray-100'
+            "
+          >
+            <p class="whitespace-pre-wrap break-words text-sm">
+              {{ message.body }}
+            </p>
+            <p class="mt-1 text-right text-[10px] text-gray-500">
+              <ClientOnly>{{ formatTime(message.createdAt) }}</ClientOnly>
+            </p>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <form class="shrink-0 border-t border-gray-800 p-3" @submit.prevent="submit">
@@ -62,6 +77,14 @@ const emit = defineEmits<{ send: [body: string] }>()
 
 const draft = ref('')
 const scrollEl = ref<HTMLElement | null>(null)
+
+const startsNewDay = (index: number) => {
+  if (index === 0) {
+    return true
+  }
+
+  return dayKey(props.messages[index].createdAt) !== dayKey(props.messages[index - 1].createdAt)
+}
 
 const submit = () => {
   const body = draft.value.trim()

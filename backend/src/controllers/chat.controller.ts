@@ -73,6 +73,26 @@ export class ChatController {
     reply.send(await this.chat.listMessages(session.id));
   };
 
+  review = async (
+    request: FastifyRequest<{ Params: { id: string }; Body: { result?: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const parent = await this.requireParent(request);
+    const result = request.body?.result;
+
+    if (result !== 'REVIEWED' && result !== 'APPROVED') {
+      throw request.server.httpErrors.badRequest('result must be REVIEWED or APPROVED');
+    }
+
+    const session = await this.sessions.findAccessible(request.params.id, parent);
+
+    if (!session) {
+      throw request.server.httpErrors.notFound('Session not found');
+    }
+
+    reply.send(await this.sessions.review(session, parent, result));
+  };
+
   private async requireUser(request: FastifyRequest): Promise<User> {
     const user = await getSessionUser(request, this.auth);
 

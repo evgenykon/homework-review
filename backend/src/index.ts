@@ -62,7 +62,12 @@ const yandexOAuthService = new YandexOAuthService(config.yandex);
 
 const healthService = new HealthService(healthRepository);
 const chatService = new ChatService(messageRepository, realtime);
-const chatSessionService = new ChatSessionService(chatSessionRepository, userRepository);
+const chatSessionService = new ChatSessionService(
+  chatSessionRepository,
+  userRepository,
+  chatService,
+  realtime,
+);
 const pageService = new PageService(
   config,
   roomPageRepository,

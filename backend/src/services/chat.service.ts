@@ -12,8 +12,13 @@ export class ChatService {
     return this.messages.findBySession(sessionId);
   }
 
-  async createMessage(sessionId: string, senderId: string, body: string): Promise<Message> {
-    const message = await this.messages.create({ sessionId, senderId, body });
+  async createMessage(
+    sessionId: string,
+    senderId: string,
+    body: string,
+    system = false,
+  ): Promise<Message> {
+    const message = await this.messages.create({ sessionId, senderId, body, system });
     this.realtime.broadcastToSession(sessionId, { type: 'message', message });
     return message;
   }

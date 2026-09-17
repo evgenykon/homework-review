@@ -1,4 +1,4 @@
-import type { ChatSession, PrismaClient } from '../../generated/prisma/client';
+import type { ChatSession, PrismaClient, ReviewStatus } from '../../generated/prisma/client';
 
 export type CreateChatSessionData = {
   name: string;
@@ -28,6 +28,13 @@ export class ChatSessionRepository {
     return this.prisma.chatSession.findMany({
       where: { parentId },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  updateStatus(id: string, status: ReviewStatus): Promise<ChatSession> {
+    return this.prisma.chatSession.update({
+      where: { id },
+      data: { status },
     });
   }
 }

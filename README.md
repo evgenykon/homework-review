@@ -98,7 +98,7 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/health` | Проверка сервера и БД |
 | `GET` | `/api/messages` | Последние сообщения |
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
-| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add` |
+| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add`, `stroke:remove`, `session:update` |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
 | `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
 | `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
@@ -112,6 +112,7 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/sessions` | Комнаты текущего пользователя |
 | `GET` | `/api/sessions/:id` | Комната по id |
 | `GET` | `/api/sessions/:id/messages` | Сообщения комнаты |
+| `POST` | `/api/sessions/:id/review` | Ревью комнаты (только родитель): `{ "result": "REVIEWED" \| "APPROVED" }` |
 | `POST` | `/api/sessions/:id/pages` | Загрузить изображение в комнату (multipart, поле `file`) |
 | `GET` | `/api/sessions/:id/pages` | Страницы комнаты с рисунками |
 | `DELETE` | `/api/pages/:pageId` | Удалить страницу (вместе с рисунками и файлом) |
@@ -146,7 +147,7 @@ Redirect-флоу (тоже поддерживается):
 
 Страница комнаты `/sessions/:id` подключается к WebSocket `/ws?sessionId=<id>` (авторизация по cookie `sid`). Отправленные сообщения сохраняются в `messages` с привязкой к сессии и отправителю и рассылаются всем участникам комнаты.
 
-Таблицы: `chat_sessions` (комната: `name`, `child_id`, `parent_id`), `messages` (`session_id`, `sender_id`, `body`).
+Таблицы: `chat_sessions` (комната: `name`, `status`, `child_id`, `parent_id`), `messages` (`session_id`, `sender_id`, `body`, `system`). Технические сообщения (добавление изображения, итог ревью) создаются с `system = true` и в чате выводятся без пузыря.
 
 ### Вайтборд
 
@@ -159,6 +160,15 @@ Redirect-флоу (тоже поддерживается):
 - Синхронизация: после завершения линии штрих сохраняется (`POST /pages/:id/strokes`) и рассылается в комнату событием `stroke:add`; добавление/удаление страниц — `page:add`/`page:remove`.
 
 Таблицы: `room_pages` (`session_id`, `position`, `file_name`, `mime_type`), `strokes` (`page_id`, `data` JSON). При удалении страницы рисунки удаляются каскадом, файл — с диска.
+
+### Ревью
+
+У комнаты есть статус (enum `ReviewStatus`): `PENDING` (по умолчанию), `REVIEWED`, `APPROVED`.
+
+- Родитель на странице комнаты нажимает **Review** → модалка с кнопками «Есть замечания» (`REVIEWED`) и «Одобрено» (`APPROVED`) → `POST /api/sessions/:id/review`.
+- После ревью статус меняется, в чат пишется сообщение вида `<имя> закончил ревью, результат: <результат>`, а всем участникам уходит WS-событие `session:update`.
+- Когда ребёнок загружает новое изображение, статус сбрасывается на `PENDING`.
+- Текущий статус показывается бейджем в шапке комнаты.
 
 ### Регистрация приложения в Яндексе
 

@@ -66,7 +66,12 @@ export class PageService {
     });
 
     this.realtime.broadcastToSession(sessionId, { type: 'page:add', page });
-    await this.chat.createMessage(sessionId, user.id, `${user.name} добавил изображение`);
+
+    if (user.type === 'child') {
+      await this.sessions.setStatus(sessionId, 'PENDING');
+    }
+
+    await this.chat.createMessage(sessionId, user.id, `${user.name} добавил изображение`, true);
 
     return page;
   }

@@ -4,6 +4,7 @@ export type CreateMessageData = {
   sessionId: string;
   senderId: string;
   body: string;
+  system?: boolean;
 };
 
 export class MessageRepository {

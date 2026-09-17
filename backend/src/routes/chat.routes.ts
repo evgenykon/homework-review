@@ -10,5 +10,6 @@ export class ChatRoutes {
     app.get('/sessions', this.controller.listMySessions);
     app.get('/sessions/:id', this.controller.getSession);
     app.get('/sessions/:id/messages', this.controller.listMessages);
+    app.post('/sessions/:id/review', this.controller.review);
   }
 }

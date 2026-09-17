@@ -3,6 +3,7 @@ export type ChatMessage = {
   sessionId: string
   senderId: string
   body: string
+  system?: boolean
   createdAt: string
 }
 
@@ -34,9 +35,12 @@ export type RoomPage = {
   strokes: Stroke[]
 }
 
+export type ReviewStatus = 'PENDING' | 'REVIEWED' | 'APPROVED'
+
 export type RoomSession = {
   id: string
   name: string
+  status: ReviewStatus
   childId: string
   parentId: string
   createdAt: string
@@ -49,6 +53,7 @@ type RoomEvent = {
   pageId?: string
   stroke?: Stroke
   strokeId?: string
+  session?: RoomSession
 }
 
 export function useRoom(sessionId: string) {
@@ -137,6 +142,8 @@ export function useRoom(sessionId: string) {
         for (const page of pages.value) {
           page.strokes = page.strokes.filter((stroke) => stroke.id !== payload.strokeId)
         }
+      } else if (payload.type === 'session:update' && payload.session) {
+        session.value = payload.session
       }
     })
   }
@@ -191,6 +198,17 @@ export function useRoom(sessionId: string) {
     await $fetch(`/api/strokes/${last.id}`, { method: 'DELETE' })
   }
 
+  const review = async (result: 'REVIEWED' | 'APPROVED') => {
+    const updated = await $fetch<RoomSession>(`/api/sessions/${sessionId}/review`, {
+      method: 'POST',
+      body: { result },
+    })
+
+    if (updated && typeof updated === 'object' && 'id' in updated) {
+      session.value = updated
+    }
+  }
+
   const imageUrl = (pageId: string) => `${config.public.backendOrigin}/api/pages/${pageId}/image`
 
   onBeforeUnmount(() => {
@@ -212,6 +230,7 @@ export function useRoom(sessionId: string) {
     deletePage,
     addStroke,
     undoLastStroke,
+    review,
     imageUrl,
   }
 }

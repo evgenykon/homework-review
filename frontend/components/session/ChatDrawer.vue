@@ -15,6 +15,7 @@
           Закрыть
         </button>
       </div>
+      <slot />
       <div class="min-h-0 flex-1">
         <RoomChat
           :messages="messages"

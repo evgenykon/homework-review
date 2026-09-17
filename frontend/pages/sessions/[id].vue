@@ -75,12 +75,20 @@
       </div>
 
       <aside class="hidden w-96 shrink-0 flex-col border-l border-gray-800 lg:flex">
-        <RoomChat
-          :messages="messages"
-          :connected="connected"
-          :current-user-id="user?.id"
-          @send="sendMessage"
+        <SessionBooks
+          :session-id="sessionId"
+          :books="books"
+          @open="viewerBook = $event"
+          @changed="refreshBooks"
         />
+        <div class="min-h-0 flex-1">
+          <RoomChat
+            :messages="messages"
+            :connected="connected"
+            :current-user-id="user?.id"
+            @send="sendMessage"
+          />
+        </div>
       </aside>
     </div>
 
@@ -108,6 +116,19 @@
       :current-user-id="user?.id"
       @close="chatOpen = false"
       @send="sendMessage"
+    >
+      <SessionBooks
+        :session-id="sessionId"
+        :books="books"
+        @open="viewerBook = $event"
+        @changed="refreshBooks"
+      />
+    </ChatDrawer>
+
+    <BookViewer
+      :book="viewerBook"
+      :backend-origin="backendOrigin"
+      @close="viewerBook = null"
     />
 
     <div
@@ -194,6 +215,7 @@
 
 <script setup lang="ts">
 import type { StrokeData } from '~/composables/useRoom'
+import type { Book } from '~/types/book'
 
 definePageMeta({ middleware: 'auth', layout: 'session' })
 
@@ -205,6 +227,7 @@ const {
   session,
   messages,
   pages,
+  books,
   currentPage,
   currentPageId,
   connected,
@@ -220,6 +243,7 @@ const {
   restore,
   remove,
   markRead,
+  refreshBooks,
 } = useRoom(sessionId)
 
 await load()
@@ -231,6 +255,7 @@ const drawingEnabled = ref(false)
 const drawColor = ref('#000000')
 const drawMode = ref<'draw' | 'erase'>('draw')
 const chatOpen = ref(false)
+const viewerBook = ref<Book | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
 

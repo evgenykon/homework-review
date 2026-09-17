@@ -48,6 +48,7 @@ model ChatSession {
   messages Message[]
   pages    RoomPage[]
   reads    SessionRead[]
+  books    SessionBook[]
 
   @@index([childId])
   @@index([parentId])
@@ -66,6 +67,37 @@ model SessionRead {
 
   @@unique([userId, sessionId])
   @@map("session_reads")
+}
+
+model Book {
+  id        String   @id @default(cuid())
+  ownerId   String   @map("owner_id")
+  title     String
+  fileName  String   @map("file_name")
+  mimeType  String   @map("mime_type")
+  size      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner User @relation("BookOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  sessions SessionBook[]
+
+  @@index([ownerId])
+  @@map("books")
+}
+
+model SessionBook {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  bookId    String   @map("book_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  book    Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, bookId])
+  @@index([sessionId])
+  @@map("session_books")
 }
 
 model RoomPage {
@@ -118,6 +150,7 @@ model User {
   parentSessions ChatSession[] @relation("SessionParent")
   messages       Message[]     @relation("MessageSender")
   sessionReads   SessionRead[]
+  books          Book[]        @relation("BookOwner")
 
   @@index([parentId])
   @@map("users")

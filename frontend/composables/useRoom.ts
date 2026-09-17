@@ -1,3 +1,5 @@
+import type { Book } from '~/types/book'
+
 export type ChatMessage = {
   id: number
   sessionId: string
@@ -65,6 +67,7 @@ export function useRoom(sessionId: string) {
   const session = ref<RoomSession | null>(null)
   const messages = ref<ChatMessage[]>([])
   const pages = ref<RoomPage[]>([])
+  const books = ref<Book[]>([])
   const currentPageId = ref<string | null>(null)
   const connected = ref(false)
 
@@ -86,8 +89,17 @@ export function useRoom(sessionId: string) {
     currentPageId.value = pages.value.at(-1)?.id ?? null
   }
 
+  const refreshBooks = async () => {
+    const data = await $fetch<Book[]>(`/api/sessions/${sessionId}/books`, {
+      headers: requestHeaders,
+      ignoreResponseError: true,
+    })
+
+    books.value = Array.isArray(data) ? data : []
+  }
+
   const load = async () => {
-    const [sessionData, messagesData, pagesData] = await Promise.all([
+    const [sessionData, messagesData, pagesData, booksData] = await Promise.all([
       $fetch<RoomSession>(`/api/sessions/${sessionId}`, {
         headers: requestHeaders,
         ignoreResponseError: true,
@@ -100,6 +112,10 @@ export function useRoom(sessionId: string) {
         headers: requestHeaders,
         ignoreResponseError: true,
       }),
+      $fetch<Book[]>(`/api/sessions/${sessionId}/books`, {
+        headers: requestHeaders,
+        ignoreResponseError: true,
+      }),
     ])
 
     if (sessionData && typeof sessionData === 'object' && 'id' in sessionData) {
@@ -108,6 +124,7 @@ export function useRoom(sessionId: string) {
 
     messages.value = Array.isArray(messagesData) ? messagesData : []
     pages.value = Array.isArray(pagesData) ? pagesData : []
+    books.value = Array.isArray(booksData) ? booksData : []
     currentPageId.value = pages.value.at(-1)?.id ?? null
   }
 
@@ -149,6 +166,8 @@ export function useRoom(sessionId: string) {
         session.value = payload.session
       } else if (payload.type === 'session:deleted' && payload.sessionId === sessionId) {
         await navigateTo('/dashboard')
+      } else if (payload.type === 'session:books:changed') {
+        void refreshBooks()
       }
     })
   }
@@ -247,6 +266,7 @@ export function useRoom(sessionId: string) {
     session,
     messages,
     pages,
+    books,
     currentPage,
     currentPageId,
     connected,
@@ -262,6 +282,7 @@ export function useRoom(sessionId: string) {
     restore,
     remove,
     markRead,
+    refreshBooks,
     imageUrl,
   }
 }

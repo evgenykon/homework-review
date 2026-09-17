@@ -59,8 +59,10 @@ const { data: rooms, refresh } = await useFetch('/api/sessions/archive', {
 
 const restoringId = ref<string | null>(null)
 
-useSessionEvents(() => {
-  void refresh()
+useSessionEvents((type) => {
+  if (type === 'sessions:changed') {
+    void refresh()
+  }
 })
 
 const restoreRoom = async (id: string) => {

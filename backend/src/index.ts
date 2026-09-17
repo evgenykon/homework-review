@@ -7,30 +7,37 @@ import websocket from '@fastify/websocket';
 import { loadConfig } from './config/env';
 import { prisma } from './config/prisma';
 import { AuthController } from './controllers/auth.controller';
+import { BookController } from './controllers/book.controller';
 import { ChatController } from './controllers/chat.controller';
 import { ChildController } from './controllers/child.controller';
 import { HealthController } from './controllers/health.controller';
 import { InviteController } from './controllers/invite.controller';
 import { PageController } from './controllers/page.controller';
+import { SessionBookController } from './controllers/session-book.controller';
 import { SocketHandler } from './handlers/socket.handler';
 import { ChatSessionRepository } from './repositories/chat-session.repository';
+import { BookRepository } from './repositories/book.repository';
 import { HealthRepository } from './repositories/health.repository';
 import { InviteRepository } from './repositories/invite.repository';
 import { MessageRepository } from './repositories/message.repository';
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { RoomPageRepository } from './repositories/room-page.repository';
+import { SessionBookRepository } from './repositories/session-book.repository';
 import { SessionReadRepository } from './repositories/session-read.repository';
 import { SessionRepository } from './repositories/session.repository';
 import { StrokeRepository } from './repositories/stroke.repository';
 import { UserRepository } from './repositories/user.repository';
 import { AuthRoutes } from './routes/auth.routes';
+import { BookRoutes } from './routes/book.routes';
 import { ChatRoutes } from './routes/chat.routes';
 import { ChildRoutes } from './routes/child.routes';
 import { HealthRoutes } from './routes/health.routes';
 import { InviteRoutes } from './routes/invite.routes';
 import { PageRoutes } from './routes/page.routes';
+import { SessionBookRoutes } from './routes/session-book.routes';
 import { WsRoutes } from './routes/ws.routes';
 import { AuthService } from './services/auth.service';
+import { BookService } from './services/book.service';
 import { ChatService } from './services/chat.service';
 import { ChatSessionService } from './services/chat-session.service';
 import { ChildService } from './services/child.service';
@@ -38,6 +45,7 @@ import { HealthService } from './services/health.service';
 import { InviteService } from './services/invite.service';
 import { PageService } from './services/page.service';
 import { RealtimeService } from './services/realtime.service';
+import { SessionBookService } from './services/session-book.service';
 import { StorageService } from './services/storage.service';
 import { YandexOAuthService } from './services/yandex-oauth.service';
 
@@ -48,11 +56,13 @@ await server.register(cors, { origin: true, credentials: true });
 await server.register(sensible);
 await server.register(cookie);
 await server.register(websocket);
-await server.register(multipart, { limits: { fileSize: 15 * 1024 * 1024 } });
+await server.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
 
 const realtime = new RealtimeService();
 const healthRepository = new HealthRepository(prisma);
 const messageRepository = new MessageRepository(prisma);
+const bookRepository = new BookRepository(prisma);
+const sessionBookRepository = new SessionBookRepository(prisma);
 const chatSessionRepository = new ChatSessionRepository(prisma);
 const sessionReadRepository = new SessionReadRepository(prisma);
 const roomPageRepository = new RoomPageRepository(prisma);
@@ -71,6 +81,14 @@ const chatService = new ChatService(
   realtime,
 );
 const storageService = new StorageService(config);
+const bookService = new BookService(
+  storageService,
+  bookRepository,
+  sessionBookRepository,
+  userRepository,
+  realtime,
+);
+const sessionBookService = new SessionBookService(sessionBookRepository, bookRepository, realtime);
 const chatSessionService = new ChatSessionService(
   chatSessionRepository,
   userRepository,
@@ -99,8 +117,14 @@ const authService = new AuthService(
 );
 
 const healthController = new HealthController(healthService);
+const bookController = new BookController(bookService, authService);
 const chatController = new ChatController(chatSessionService, chatService, authService);
 const pageController = new PageController(pageService, chatSessionService, authService);
+const sessionBookController = new SessionBookController(
+  sessionBookService,
+  chatSessionService,
+  authService,
+);
 const authController = new AuthController(authService);
 const inviteController = new InviteController(inviteService, authService);
 const childController = new ChildController(childService, authService);
@@ -114,6 +138,8 @@ await server.register(
     new ChildRoutes(childController).register(api);
     new ChatRoutes(chatController).register(api);
     new PageRoutes(pageController).register(api);
+    new BookRoutes(bookController).register(api);
+    new SessionBookRoutes(sessionBookController).register(api);
   },
   { prefix: '/api' },
 );

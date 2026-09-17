@@ -1,4 +1,4 @@
-export function useSessionEvents(onChanged: () => void) {
+export function useSessionEvents(onEvent: (type: string) => void) {
   const config = useRuntimeConfig()
   let socket: WebSocket | null = null
 
@@ -8,8 +8,8 @@ export function useSessionEvents(onChanged: () => void) {
     socket.addEventListener('message', (event) => {
       const payload = JSON.parse(event.data as string) as { type: string }
 
-      if (payload.type === 'sessions:changed') {
-        onChanged()
+      if (payload.type === 'sessions:changed' || payload.type === 'library:changed') {
+        onEvent(payload.type)
       }
     })
   })

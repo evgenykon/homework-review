@@ -98,8 +98,8 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/health` | Проверка сервера и БД |
 | `GET` | `/api/messages` | Последние сообщения |
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
-| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add`, `stroke:remove`, `session:update`, `session:deleted` |
-| `WS` | `/ws` | Персональный канал пользователя (дашборд, архив): `sessions:changed` при создании/изменении/удалении комнат |
+| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add`, `stroke:remove`, `session:update`, `session:deleted`, `session:books:changed` |
+| `WS` | `/ws` | Персональный канал пользователя (дашборд, архив, библиотека): `sessions:changed`, `library:changed` |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
 | `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
 | `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
@@ -119,6 +119,12 @@ make up                # собрать dev-образы и запустить �
 | `POST` | `/api/sessions/:id/archive` | Архивировать комнату (только родитель) |
 | `POST` | `/api/sessions/:id/restore` | Восстановить комнату из архива |
 | `DELETE` | `/api/sessions/:id` | Удалить комнату навсегда (сообщения, рисунки, файлы) |
+| `GET` | `/api/books` | Книги библиотеки (общие для родителя и его детей) |
+| `POST` | `/api/books` | Добавить книгу (multipart: `title`, `file`) |
+| `GET` | `/api/books/:id/file` | Файл книги |
+| `DELETE` | `/api/books/:id` | Удалить книгу |
+| `GET` | `/api/sessions/:id/books` | Книги, привязанные к комнате |
+| `PUT` | `/api/sessions/:id/books` | Задать список книг комнаты `{ "bookIds": [...] }` |
 | `POST` | `/api/sessions/:id/pages` | Загрузить изображение в комнату (multipart, поле `file`) |
 | `GET` | `/api/sessions/:id/pages` | Страницы комнаты с рисунками |
 | `DELETE` | `/api/pages/:pageId` | Удалить страницу (вместе с рисунками и файлом) |
@@ -186,6 +192,19 @@ Redirect-флоу (тоже поддерживается):
 ### Непрочитанные сообщения
 
 `GET /api/sessions` возвращает комнаты с полем `unreadCount` — количество сообщений не от текущего пользователя после последнего прочтения. При открытии комнаты фронт вызывает `POST /sessions/:id/read`; при новом сообщении участникам уходит WS `sessions:changed`, и дашборд обновляет счётчики. Прогресс чтения хранится в `session_reads` (`user_id`, `session_id`, `last_read_message_id`).
+
+### Библиотека
+
+Раздел `/library` — общая библиотека учебников для родителя и его детей (владелец — родитель: книга, загруженная ребёнком, попадает в библиотеку его родителя).
+
+- На дашборде карточка **«Библиотека (N)»** со счётчиком книг.
+- «Добавить» открывает модалку: название + файл (выбор файла или drag&drop). Загрузка — `POST /api/books` (multipart).
+- Книгу можно открыть (`GET /api/books/:id/file`, отдаётся inline — браузер показывает PDF) и удалить (`DELETE /api/books/:id`, файл стирается с диска).
+- Изменения библиотеки рассылаются связанным пользователям WS-событием `library:changed` (через персональный канал).
+
+Таблица: `books` (`owner_id`, `title`, `file_name`, `mime_type`, `size`).
+
+В комнате над чатом есть блок **«Книги»**: привязанные к комнате книги (клик по названию открывает тот же вьюер) и кнопка **«+ Добавить»** — открывает список библиотеки с чекбоксами; отмеченные книги сохраняются в комнате (`PUT /sessions/:id/books`) и рассылаются участникам событием `session:books:changed`. Связь хранится в `session_books` (`session_id`, `book_id`).
 
 ### Регистрация приложения в Яндексе
 

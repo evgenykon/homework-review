@@ -81,6 +81,18 @@
       </ul>
     </div>
 
+    <div class="app-card space-y-3">
+      <h2 class="text-lg font-semibold text-gray-100">
+        Библиотека
+      </h2>
+      <NuxtLink
+        to="/library"
+        class="inline-block self-start rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/5"
+      >
+        Библиотека ({{ books.length }})
+      </NuxtLink>
+    </div>
+
     <div v-if="user?.type === 'parent' && archivedRooms.length" class="app-card space-y-3">
       <h2 class="text-lg font-semibold text-gray-100">
         Архив
@@ -238,6 +250,14 @@ type ChatSession = {
   createdAt: string
 }
 
+type Book = {
+  id: string
+  title: string
+  mimeType: string
+  size: number
+  createdAt: string
+}
+
 type Invite = {
   token: string
   url: string
@@ -268,9 +288,21 @@ const { data: archivedRooms, refresh: refreshArchived } = await useFetch('/api/s
   transform: (data): ChatSession[] => (Array.isArray(data) ? (data as ChatSession[]) : []),
 })
 
-useSessionEvents(() => {
-  void refreshRooms()
-  void refreshArchived()
+const { data: books, refresh: refreshBooks } = await useFetch('/api/books', {
+  headers: useRequestHeaders(['cookie']),
+  ignoreResponseError: true,
+  transform: (data): Book[] => (Array.isArray(data) ? (data as Book[]) : []),
+})
+
+useSessionEvents((type) => {
+  if (type === 'sessions:changed') {
+    void refreshRooms()
+    void refreshArchived()
+  }
+
+  if (type === 'library:changed') {
+    void refreshBooks()
+  }
 })
 
 const createRoomOpen = ref(false)

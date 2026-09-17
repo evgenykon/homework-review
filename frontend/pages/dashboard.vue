@@ -245,6 +245,29 @@
         </form>
       </div>
     </div>
+    <div class="pointer-events-none fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+      <TransitionGroup
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-2 opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          class="pointer-events-auto rounded-lg bg-gray-800 p-3 shadow-lg ring-1 ring-gray-700"
+        >
+          <p class="text-sm font-medium text-gray-100">
+            {{ toast.title }}
+          </p>
+          <p class="mt-0.5 break-words text-sm text-gray-400">
+            {{ toast.body }}
+          </p>
+        </div>
+      </TransitionGroup>
+    </div>
   </section>
 </template>
 
@@ -293,6 +316,8 @@ const {
   permission: notificationPermission,
   request: requestNotifications,
 } = useNotifications()
+
+const { toasts } = useToasts()
 
 const { data: children } = await useFetch('/api/children', {
   headers: useRequestHeaders(['cookie']),

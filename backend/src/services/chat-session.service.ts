@@ -3,6 +3,7 @@ import type { ChatSessionRepository } from '../repositories/chat-session.reposit
 import type { RoomPageRepository } from '../repositories/room-page.repository';
 import type { UserRepository } from '../repositories/user.repository';
 import type { ChatService } from './chat.service';
+import { sendNotification, type NotificationKind } from './notifications';
 import type { RealtimeService } from './realtime.service';
 import type { StorageService } from './storage.service';
 
@@ -96,7 +97,23 @@ export class ChatSessionService {
       true,
     );
 
+    sendNotification(
+      this.realtime,
+      updated,
+      user.id,
+      'status',
+      `Ревью: ${REVIEW_RESULT_LABELS[result]}`,
+    );
+
     return updated;
+  }
+
+  async notify(sessionId: string, actorId: string, kind: NotificationKind, body: string): Promise<void> {
+    const session = await this.sessions.findById(sessionId);
+
+    if (session) {
+      sendNotification(this.realtime, session, actorId, kind, body);
+    }
   }
 
   listArchivedForParent(parentId: string): Promise<ChatSession[]> {

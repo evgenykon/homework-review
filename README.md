@@ -99,7 +99,7 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/messages` | Последние сообщения |
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
 | `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add`, `stroke:remove`, `session:update`, `session:deleted`, `session:books:changed` |
-| `WS` | `/ws` | Персональный канал пользователя (дашборд, архив, библиотека): `sessions:changed`, `library:changed` |
+| `WS` | `/ws` | Персональный канал пользователя (дашборд, архив, библиотека): `sessions:changed`, `library:changed`, `notification` |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
 | `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
 | `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
@@ -205,6 +205,10 @@ Redirect-флоу (тоже поддерживается):
 Таблица: `books` (`owner_id`, `title`, `file_name`, `mime_type`, `size`).
 
 В комнате над чатом есть блок **«Книги»**: привязанные к комнате книги (клик по названию открывает тот же вьюер) и кнопка **«+ Добавить»** — открывает список библиотеки с чекбоксами; отмеченные книги сохраняются в комнате (`PUT /sessions/:id/books`) и рассылаются участникам событием `session:books:changed`. Связь хранится в `session_books` (`session_id`, `book_id`).
+
+### Уведомления
+
+В браузере можно включить уведомления (кнопка на дашборде, Notification API). На события, затрагивающие второго участника, backend шлёт в персональный канал событие `notification` с `kind`: `message` (новое сообщение), `status` (итог ревью), `image` (добавлено изображение). Фронт показывает уведомление только когда вкладка не активна (`document.hidden`), с дебаунсом — не чаще одного на `kind:sessionId` раз в 3 секунды.
 
 ### Регистрация приложения в Яндексе
 

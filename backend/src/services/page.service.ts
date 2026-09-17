@@ -69,6 +69,7 @@ export class PageService {
     }
 
     await this.chat.createMessage(sessionId, user.id, `${user.name} добавил изображение`, true);
+    await this.sessions.notify(sessionId, user.id, 'image', 'Добавлено изображение');
 
     return page;
   }

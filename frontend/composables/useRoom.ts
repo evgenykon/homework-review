@@ -1,4 +1,5 @@
 import type { Book } from '~/types/book'
+import type { NotificationPayload } from '~/composables/useNotifications'
 
 export type ChatMessage = {
   id: number
@@ -58,11 +59,15 @@ type RoomEvent = {
   strokeId?: string
   session?: RoomSession
   sessionId?: string
+  kind?: string
+  title?: string
+  body?: string
 }
 
 export function useRoom(sessionId: string) {
   const config = useRuntimeConfig()
   const { user } = useAuth()
+  const { notify } = useNotifications()
 
   const session = ref<RoomSession | null>(null)
   const messages = ref<ChatMessage[]>([])
@@ -168,6 +173,13 @@ export function useRoom(sessionId: string) {
         await navigateTo('/dashboard')
       } else if (payload.type === 'session:books:changed') {
         void refreshBooks()
+      } else if (payload.type === 'notification' && payload.kind && payload.title && payload.body) {
+        notify({
+          kind: payload.kind,
+          title: payload.title,
+          body: payload.body,
+          sessionId: payload.sessionId,
+        } satisfies NotificationPayload)
       }
     })
   }

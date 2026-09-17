@@ -1,5 +1,23 @@
 <template>
   <section class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <ClientOnly>
+      <div
+        v-if="notificationsSupported && notificationPermission !== 'granted'"
+        class="app-card flex items-center justify-between gap-3"
+      >
+        <span class="text-sm text-gray-400">
+          Включить уведомления о сообщениях и изменениях?
+        </span>
+        <button
+          type="button"
+          class="shrink-0 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+          @click="requestNotifications"
+        >
+          Включить
+        </button>
+      </div>
+    </ClientOnly>
+
     <div class="app-card space-y-4">
       <div v-if="user" class="flex items-center gap-3">
         <img
@@ -269,6 +287,12 @@ definePageMeta({ middleware: 'auth' })
 useHead({ title: 'Homework Review' })
 
 const { user, logout } = useAuth()
+
+const {
+  supported: notificationsSupported,
+  permission: notificationPermission,
+  request: requestNotifications,
+} = useNotifications()
 
 const { data: children } = await useFetch('/api/children', {
   headers: useRequestHeaders(['cookie']),

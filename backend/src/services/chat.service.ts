@@ -3,6 +3,7 @@ import type { ChatSessionRepository } from '../repositories/chat-session.reposit
 import type { MessageRepository } from '../repositories/message.repository';
 import type { SessionReadRepository } from '../repositories/session-read.repository';
 import type { RealtimeService } from './realtime.service';
+import { sendNotification } from './notifications';
 
 export class ChatService {
   constructor(
@@ -30,6 +31,10 @@ export class ChatService {
     if (session) {
       this.realtime.broadcastToUser(session.parentId, { type: 'sessions:changed' });
       this.realtime.broadcastToUser(session.childId, { type: 'sessions:changed' });
+
+      if (!system) {
+        sendNotification(this.realtime, session, senderId, 'message', body);
+      }
     }
 
     return message;

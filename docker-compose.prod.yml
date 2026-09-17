@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: production
+    environment:
+      NODE_ENV: production
+    volumes: !reset []
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    environment:
+      NODE_ENV: production
+    volumes: !reset []

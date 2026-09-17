@@ -1,0 +1,26 @@
+{
+  "name": "homework-review-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt prepare && vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "nuxt": "^4.5.2",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "sass": "^1.104.1",
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.3.11"
+  },
+  "trustedDependencies": [
+    "@parcel/watcher"
+  ]
+}

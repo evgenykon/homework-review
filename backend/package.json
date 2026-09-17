@@ -1,0 +1,31 @@
+{
+  "name": "homework-review-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "prisma migrate deploy && bun run --watch src/index.ts",
+    "start": "prisma migrate deploy && bun run src/index.ts",
+    "build": "prisma generate && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/sensible": "^6.0.5",
+    "@fastify/websocket": "^11.3.0",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "fastify": "^5.12.5",
+    "prisma": "^7.10.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "@types/ws": "^8.5.12",
+    "typescript": "^6.0.3"
+  }
+}

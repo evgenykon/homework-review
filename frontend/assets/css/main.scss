@@ -23,13 +23,5 @@ body {
 }
 
 .ya-button {
-  display: flex;
-  min-height: 5.5rem;
-  align-items: center;
-  justify-content: center;
-
-  iframe {
-    transform: scale(1.5);
-    transform-origin: center center;
-  }
+  min-height: 4rem;
 }

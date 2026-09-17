@@ -33,6 +33,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}
       APP_URL: ${APP_URL:-http://localhost:3000}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      INVITE_TTL_DAYS: ${INVITE_TTL_DAYS:-7}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:-}
       YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET:-}
@@ -53,6 +54,7 @@ services:
     environment:
       NUXT_PUBLIC_API_BASE: http://backend:3001
       NUXT_PUBLIC_WS_BASE: ws://localhost:${BACKEND_PORT:-3001}
+      NUXT_PUBLIC_YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:-}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     volumes:

@@ -1,15 +1,15 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { UserType } from '../../generated/prisma/client';
-import type { AuthService } from '../services/auth.service';
+import { OAUTH_STATE_COOKIE, SESSION_COOKIE } from '../config/cookies';
+import type { AuthService, SessionResult } from '../services/auth.service';
 
-const SESSION_COOKIE = 'sid';
-const STATE_COOKIE = 'oauth_state';
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
 type StartQuery = {
   role?: string;
   parentId?: string;
+  invite?: string;
 };
 
 type CallbackQuery = {
@@ -17,10 +17,17 @@ type CallbackQuery = {
   state?: string;
 };
 
+type TokenBody = {
+  token?: string;
+  role?: string;
+  invite?: string;
+};
+
 type StatePayload = {
   nonce: string;
   type: UserType;
   parentId: string | null;
+  invite: string | null;
 };
 
 export class AuthController {
@@ -37,10 +44,11 @@ export class AuthController {
         nonce: randomBytes(16).toString('hex'),
         type,
         parentId: request.query.parentId ?? null,
+        invite: request.query.invite ?? null,
       } satisfies StatePayload),
     ).toString('base64url');
 
-    reply.setCookie(STATE_COOKIE, state, {
+    reply.setCookie(OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
       sameSite: 'lax',
       secure: this.service.cookieSecure,
@@ -56,7 +64,7 @@ export class AuthController {
     reply: FastifyReply,
   ): Promise<void> => {
     const { code, state } = request.query;
-    const cookieState = request.cookies[STATE_COOKIE];
+    const cookieState = request.cookies[OAUTH_STATE_COOKIE];
 
     if (!code || !state || !cookieState || state !== cookieState) {
       throw request.server.httpErrors.badRequest('Invalid OAuth state');
@@ -73,6 +81,7 @@ export class AuthController {
       const result = await this.service.loginWithYandex(code, {
         type: payload.type,
         parentId: payload.parentId,
+        inviteToken: payload.invite,
       });
       token = result.token;
       expiresAt = result.expiresAt;
@@ -81,7 +90,7 @@ export class AuthController {
       throw request.server.httpErrors.badGateway('Yandex OAuth login failed');
     }
 
-    reply.clearCookie(STATE_COOKIE, { path: '/' });
+    reply.clearCookie(OAUTH_STATE_COOKIE, { path: '/' });
     reply.setCookie(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: 'lax',
@@ -91,6 +100,41 @@ export class AuthController {
     });
 
     reply.redirect(this.service.appUrl);
+  };
+
+  tokenYandex = async (
+    request: FastifyRequest<{ Body: TokenBody }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const accessToken = request.body?.token?.trim();
+
+    if (!accessToken) {
+      throw request.server.httpErrors.badRequest('token is required');
+    }
+
+    const type = request.body?.role === 'child' ? UserType.child : UserType.parent;
+
+    let result: SessionResult;
+
+    try {
+      result = await this.service.loginWithYandexToken(accessToken, {
+        type,
+        inviteToken: request.body?.invite ?? null,
+      });
+    } catch (error) {
+      request.log.error(error, 'Yandex token login failed');
+      throw request.server.httpErrors.badGateway('Yandex login failed');
+    }
+
+    reply.setCookie(SESSION_COOKIE, result.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: this.service.cookieSecure,
+      path: '/',
+      expires: result.expiresAt,
+    });
+
+    reply.send(result.user);
   };
 
   me = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {

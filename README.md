@@ -100,15 +100,21 @@ make up                # собрать dev-образы и запустить �
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
 | `WS` | `/ws` | Отправка `{ "body": "..." }`, приём `{ "type": "message", ... }` |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
-| `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth |
+| `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
+| `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
 | `GET` | `/api/auth/me` | Текущий пользователь (по сессии) |
 | `POST` | `/api/auth/logout` | Завершить сессию |
+| `POST` | `/api/invites` | Создать инвайт для ребёнка (только роль `parent`) |
 
 HTTP-запросы из браузера идут через прокси Nuxt (`/api/*` → `backend:3001`). WebSocket подключается напрямую к backend.
 
 ## Аутентификация
 
 Вход возможен **только через OAuth** (Яндекс). Паролей нет.
+
+На странице `/login` используется **официальная кнопка Яндекс ID** (SDK `YaAuthSuggest`, «мгновенная авторизация»). Она возвращает OAuth-токен, который фронтенд отправляет в `POST /api/auth/yandex/token`; backend проверяет токен и создаёт сессию. Если `YANDEX_CLIENT_ID` не задан или SDK не загрузился, показывается запасная кнопка-ссылка на redirect-флоу `/api/auth/yandex`.
+
+Redirect-флоу (тоже поддерживается):
 
 - `GET /api/auth/yandex` формирует `state` (с ролью и `parentId`), кладёт его в httpOnly-cookie `oauth_state` и редиректит в Яндекс.
 - Яндекс возвращает код на `YANDEX_REDIRECT_URI`; backend меняет код на токен, забирает профиль (имя, аватар, email).
@@ -118,14 +124,21 @@ HTTP-запросы из браузера идут через прокси Nuxt 
 
 Роли: `parent` и `child` (enum `UserType`). Таблицы: `users`, `oauth_accounts` (привязка OAuth-аккаунтов), `sessions`.
 
+### Инвайты
+
+Родитель на `/dashboard` нажимает «Сгенерировать инвайт» → `POST /api/invites` создаёт запись в `invites` и возвращает ссылку вида `http://localhost:3000/login?invite=<token>`. Ребёнок открывает ссылку, входит через Яндекс, и при входе backend привязывает его к родителю (`users.parent_id`, роль `child`), после чего инвайт помечается использованным. Инвайт одноразовый и истекает через `INVITE_TTL_DAYS`.
+
 ### Регистрация приложения в Яндексе
 
 В консоли Яндекс OAuth (https://oauth.yandex.ru/) при создании приложения:
 
 - Платформа: **Веб-сервисы**.
-- **Redirect URI**: `http://localhost:3000/api/auth/yandex/callback` — для локальной разработки; `https://<домен>/api/auth/yandex/callback` — для прода.
-- **Suggest Hostname**: `http://localhost:3000` — хост страницы с кнопкой входа (для локальной разработки; можно оставить пустым). Для прода — `https://<домен>`.
-- Права доступа (scope): `login:info`, `login:email`, `login:avatar`.
+- **Redirect URI** (оба адреса):
+  - `http://localhost:3000/api/auth/yandex/callback` — redirect-флоу;
+  - `http://localhost:3000/suggest/token` — вспомогательная страница официальной кнопки.
+  - Для прода — те же пути на `https://<домен>`.
+- **Suggest Hostname**: `http://localhost:3000` (нужен для официальной кнопки; для прода — `https://<домен>`).
+- Права доступа (scope): `login:info`, `login:email`, `login:avatar`, `login:birthday`.
 
 Redirect URI сверяется точно по схеме, хосту, порту и пути; на одно приложение допускается до 5 URI.
 
@@ -143,6 +156,7 @@ Redirect URI сверяется точно по схеме, хосту, порт
 | `FRONTEND_PORT` | `3000` | Порт frontend на хосте |
 | `APP_URL` | `http://localhost:3000` | Куда редиректить после входа |
 | `SESSION_TTL_DAYS` | `30` | Время жизни сессии |
+| `INVITE_TTL_DAYS` | `7` | Время жизни инвайта |
 | `COOKIE_SECURE` | `false` | Флаг `Secure` у cookie (включить за HTTPS) |
 | `YANDEX_CLIENT_ID` | — | Client ID приложения Яндекса |
 | `YANDEX_CLIENT_SECRET` | — | Client Secret приложения Яндекса |

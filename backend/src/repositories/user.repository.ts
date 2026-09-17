@@ -24,6 +24,19 @@ export class UserRepository {
     });
   }
 
+  findChildren(parentId: string): Promise<User[]> {
+    return this.prisma.user.findMany({
+      where: { parentId, type: 'child' },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  findChild(parentId: string, childId: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: { id: childId, parentId, type: 'child' },
+    });
+  }
+
   create(data: CreateUserData): Promise<User> {
     return this.prisma.user.create({ data });
   }

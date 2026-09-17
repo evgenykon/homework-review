@@ -36,6 +36,9 @@ model User {
   accounts OAuthAccount[]
   sessions Session[]
 
+  invites     Invite[] @relation("InviteParent")
+  usedInvites Invite[] @relation("InviteUsedBy")
+
   @@index([parentId])
   @@map("users")
 }
@@ -67,4 +70,20 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  parentId  String    @map("parent_id")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  usedById  String?   @map("used_by_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  parent User  @relation("InviteParent", fields: [parentId], references: [id], onDelete: Cascade)
+  usedBy User? @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
+
+  @@index([parentId])
+  @@map("invites")
 }

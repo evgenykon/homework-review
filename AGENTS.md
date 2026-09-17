@@ -60,9 +60,11 @@ docker run --rm -v "$PWD/frontend:/app" -w /app oven/bun:1 bun run build
 ### Аутентификация
 
 - Вход только через OAuth (Яндекс). Паролей нет. Провайдер инкапсулирован в `src/services/yandex-oauth.service.ts`.
+- Поддерживаются два флоу: redirect (`/auth/yandex` → `/auth/yandex/callback`) и токен из официальной кнопки Яндекс ID (`POST /auth/yandex/token`).
 - `src/services/auth.service.ts` — вход (поиск/создание `users` + привязка в `oauth_accounts`), создание/проверка/удаление сессий.
 - Сессии хранятся в таблице `sessions`; токен передаётся в httpOnly-cookie `sid`. Cookie ставится/чистится в `auth.controller.ts`.
 - Роли: enum `UserType` (`parent`, `child`); связь родитель→ребёнок через `users.parent_id` (self-relation).
+- Инвайты: `src/services/invite.service.ts` + `invite.repository.ts`; родитель создаёт ссылку (`POST /invites`), при входе ребёнка инвайт привязывает его к родителю и помечается использованным (таблица `invites`).
 - `state` OAuth кладётся в httpOnly-cookie `oauth_state` и проверяется в callback (CSRF).
 - Новые эндпоинты добавляй в `src/routes/auth.routes.ts` → `AuthController` → `AuthService`.
 - OAuth-редиректы идут через Nuxt-прокси, поэтому `server/routes/api/[...path].ts` пробрасывает cookie, `Set-Cookie` и `Location`.
@@ -74,14 +76,14 @@ docker run --rm -v "$PWD/frontend:/app" -w /app oven/bun:1 bun run build
 - Тема только тёмная — светлую тему и переключатель не добавлять.
 - Обращения к API из браузера идут через прокси `server/routes/api/[...path].ts` (`/api/*` → `backend:3001`).
 - WebSocket подключается напрямую, базовый адрес — `runtimeConfig.public.wsBase`.
-- Каталог `components/` пока отсутствует (каркас пустой).
+- Каталог `components/` пока отсутствует. Авторизация: `composables/useAuth.ts` (состояние текущего юзера) и `middleware/auth.ts` (редиректы: `/` → `/dashboard` или `/login`).
 
 ## Окружение
 
 - Порты: frontend `3000`, backend `3001`, PostgreSQL `5432`.
 - Данные PostgreSQL — в persistent-томе `homework-review_postgres_data` (переживает `down`/`up`). Удаление: `make reset-db`.
 - Env: корневой `.env` (см. `.env.example`), backend `DATABASE_URL`/`PORT`/`HOST`, frontend `NUXT_PUBLIC_API_BASE`/`NUXT_PUBLIC_WS_BASE`.
-- OAuth (Яндекс): `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`, `APP_URL`, `SESSION_TTL_DAYS`, `COOKIE_SECURE`.
+- OAuth (Яндекс): `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`, `APP_URL`, `SESSION_TTL_DAYS`, `INVITE_TTL_DAYS`, `COOKIE_SECURE`. Frontend получает `client_id` через `NUXT_PUBLIC_YANDEX_CLIENT_ID` (прокидывается из `YANDEX_CLIENT_ID`).
 
 ## Git
 

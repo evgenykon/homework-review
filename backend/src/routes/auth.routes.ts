@@ -7,6 +7,7 @@ export class AuthRoutes {
   register(app: FastifyInstance): void {
     app.get('/auth/yandex', this.controller.startYandex);
     app.get('/auth/yandex/callback', this.controller.callbackYandex);
+    app.post('/auth/yandex/token', this.controller.tokenYandex);
     app.get('/auth/me', this.controller.me);
     app.post('/auth/logout', this.controller.logout);
   }

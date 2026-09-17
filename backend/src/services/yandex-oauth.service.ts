@@ -8,6 +8,7 @@ export type YandexProfile = {
   providerAccountId: string;
   name: string;
   photoUrl: string | null;
+  age: number | null;
   email: string | null;
 };
 
@@ -23,7 +24,39 @@ type YandexUserInfo = {
   default_email?: string;
   is_avatar_empty?: boolean;
   default_avatar_id?: string;
+  birthday?: string | null;
 };
+
+function calculateAge(birthday: string | null | undefined): number | null {
+  if (!birthday) {
+    return null;
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthday);
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  // Yandex fills unknown parts with zeros (e.g. 0000-12-23), so the age is unknown.
+  if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getUTCFullYear() - year;
+  const monthDelta = today.getUTCMonth() + 1 - month;
+
+  if (monthDelta < 0 || (monthDelta === 0 && today.getUTCDate() < day)) {
+    age -= 1;
+  }
+
+  return age >= 0 && age <= 150 ? age : null;
+}
 
 export class YandexOAuthService {
   constructor(private readonly config: YandexConfig) {}
@@ -33,7 +66,7 @@ export class YandexOAuthService {
       response_type: 'code',
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
-      scope: 'login:info login:email login:avatar',
+      scope: 'login:info login:email login:avatar login:birthday',
       state,
     });
 
@@ -87,6 +120,7 @@ export class YandexOAuthService {
         data.is_avatar_empty || !data.default_avatar_id
           ? null
           : `https://avatars.yandex.net/get-yapic/${data.default_avatar_id}/islands-200`,
+      age: calculateAge(data.birthday),
       email: data.default_email ?? null,
     };
   }

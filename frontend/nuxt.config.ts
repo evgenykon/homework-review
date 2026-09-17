@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     public: {
       apiBase: 'http://localhost:3001',
       wsBase: 'ws://localhost:3001',
+      yandexClientId: '',
     },
   },
 });

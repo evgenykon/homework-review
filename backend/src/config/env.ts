@@ -9,6 +9,7 @@ export type AppConfig = {
   host: string;
   appUrl: string;
   sessionTtlMs: number;
+  inviteTtlMs: number;
   cookieSecure: boolean;
   yandex: YandexConfig;
 };
@@ -21,6 +22,7 @@ export function loadConfig(): AppConfig {
     host: process.env.HOST ?? '0.0.0.0',
     appUrl: process.env.APP_URL ?? 'http://localhost:3000',
     sessionTtlMs: Number(process.env.SESSION_TTL_DAYS ?? 30) * DAY_MS,
+    inviteTtlMs: Number(process.env.INVITE_TTL_DAYS ?? 7) * DAY_MS,
     cookieSecure: process.env.COOKIE_SECURE === 'true',
     yandex: {
       clientId: process.env.YANDEX_CLIENT_ID ?? '',

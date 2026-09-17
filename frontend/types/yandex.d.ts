@@ -7,6 +7,8 @@ declare global {
   }
 
   interface YandexSuggestInitResult extends YandexSuggestToken {
+    status?: 'ok' | 'error'
+    code?: string
     handler?: () => Promise<YandexSuggestToken>
   }
 

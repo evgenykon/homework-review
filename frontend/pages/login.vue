@@ -73,6 +73,21 @@ onMounted(async () => {
       },
     )
 
+    console.log('[yandex] init result', result)
+
+    if (result.status === 'error') {
+      throw new Error(`Яндекс SDK: ${result.code ?? 'unknown error'}`)
+    }
+
+    setTimeout(() => {
+      const container = document.getElementById('yandex-button')
+
+      if (container && container.childElementCount === 0) {
+        console.warn('[yandex] button not rendered')
+        showFallback.value = true
+      }
+    }, 3000)
+
     const data = typeof result.handler === 'function' ? await result.handler() : result
     const token = data.access_token ?? data.token
 
@@ -86,6 +101,7 @@ onMounted(async () => {
     })
     await navigateTo('/dashboard')
   } catch (e) {
+    console.error('[yandex] auth failed', e)
     error.value = e instanceof Error ? e.message : String(e)
     showFallback.value = true
   }

@@ -1,17 +1,40 @@
 services:
+  postgres:
+    ports: !override []
+
   backend:
-    build:
-      context: ./backend
-      target: production
+    image: ${BACKEND_IMAGE:-ghcr.io/evgenykon/homework-review-backend:latest}
+    build: !reset null
+    ports: !override []
     environment:
       NODE_ENV: production
     volumes: !override
       - ./uploads:/data/uploads
 
   frontend:
-    build:
-      context: ./frontend
-      target: production
+    image: ${FRONTEND_IMAGE:-ghcr.io/evgenykon/homework-review-frontend:latest}
+    build: !reset null
+    ports: !override []
     environment:
       NODE_ENV: production
     volumes: !reset []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

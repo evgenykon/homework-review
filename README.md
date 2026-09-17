@@ -213,3 +213,29 @@ Backend: `DATABASE_URL`, `PORT`, `HOST`. Frontend: `NUXT_PUBLIC_API_BASE`, `NUXT
 - Сбросить БД: `make reset-db`.
 - Новая миграция: изменить `backend/prisma/schema.prisma` и выполнить `make db-migrate name=<name>`.
 - При старте backend автоматически применяет миграции (`prisma migrate deploy`).
+
+## Деплой
+
+Прод-стек (`docker-compose.yml` + `docker-compose.prod.yml`) запускается на сервере из готовых образов:
+
+- **Caddy** — единственная публичная точка (порты 80/443), автоматически получает сертификат Let's Encrypt для `DOMAIN` и проксирует: `/api/*` → backend, `/ws` → backend, остальное → frontend.
+- **backend** и **frontend** — образы из GHCR, порты наружу не публикуются.
+- **postgres** — только внутри сети compose, данные в persistent-томе.
+
+Пайплайн GitHub Actions (`.github/workflows/build.yml`):
+1. `build` — собирает образы backend/frontend (target `production`) и пушит в `ghcr.io/<owner>/<repo>-{backend,frontend}`.
+2. `deploy` — после `build`: раскладывает `docker-compose.yml`, `docker-compose.prod.yml`, `Caddyfile` на сервер, формирует `.env` из Variables/Secrets, логинится в GHCR (если задан токен) и выполняет `docker compose pull && up -d`.
+
+Сертификат выпускается автоматически при первом старте Caddy: нужны DNS-запись домена на сервер и открытые порты 80/443.
+
+### GitHub: Secrets
+
+`SSH_PRIVATE_KEY`, `POSTGRES_PASSWORD`, `YANDEX_CLIENT_SECRET`, `GHCR_TOKEN`.
+
+### GitHub: Variables
+
+`DOMAIN`, `DEPLOY_HOST`, `DEPLOY_USER`, `GHCR_USER`, `YANDEX_CLIENT_ID`, `YANDEX_REDIRECT_URI`; опционально `POSTGRES_USER`, `POSTGRES_DB`, `BACKEND_PORT`, `FRONTEND_PORT`, `APP_URL`, `PUBLIC_BACKEND_ORIGIN`, `PUBLIC_WS_BASE`, `SESSION_TTL_DAYS`, `INVITE_TTL_DAYS`, `COOKIE_SECURE`.
+
+### Яндекс OAuth для прода
+
+В консоли Яндекс OAuth добавить Redirect URI `https://<DOMAIN>/api/auth/yandex/callback` и `https://<DOMAIN>/suggest/token`, Suggest Hostname — `https://<DOMAIN>`.

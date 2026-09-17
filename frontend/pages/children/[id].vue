@@ -38,7 +38,7 @@
           >
             <span class="text-gray-100">{{ session.name }}</span>
             <span class="text-xs text-gray-500">
-              {{ new Date(session.createdAt).toLocaleDateString() }}
+              <ClientOnly>{{ formatDate(session.createdAt) }}</ClientOnly>
             </span>
           </NuxtLink>
         </li>

@@ -67,6 +67,7 @@ docker run --rm -v "$PWD/frontend:/app" -w /app oven/bun:1 bun run build
 - Инвайты: `src/services/invite.service.ts` + `invite.repository.ts`; родитель создаёт ссылку (`POST /invites`), при входе ребёнка инвайт привязывает его к родителю и помечается использованным (таблица `invites`).
 - Дети: `src/services/child.service.ts` + `UserRepository.findChildren/findChild`; `GET /children`, `GET /children/:id` — только для родителя.
 - Чат: `chat-session.service.ts`/`chat-session.repository.ts` (комнаты `chat_sessions`) и `chat.service.ts`/`message.repository.ts` (сообщения `messages`); WebSocket `/ws?sessionId=<id>` авторизуется по cookie `sid`, проверяет доступ к комнате и держит комнаты в `realtime.service.ts`. Контроллер — `chat.controller.ts`, маршруты — `chat.routes.ts`.
+- Вайтборд: `page.service.ts` + `room-page.repository.ts`/`stroke.repository.ts` (страницы `room_pages` и штрихи `strokes`). Файлы изображений пишутся в `UPLOAD_DIR` (dev — `./uploads`, примонтирован в контейнер, в `.gitignore`). Загрузка — `@fastify/multipart`, отдача — `GET /pages/:pageId/image`. События WS: `page:add`, `page:remove`, `stroke:add`.
 - `state` OAuth кладётся в httpOnly-cookie `oauth_state` и проверяется в callback (CSRF).
 - Новые эндпоинты добавляй в `src/routes/auth.routes.ts` → `AuthController` → `AuthService`.
 - OAuth-редиректы идут через Nuxt-прокси, поэтому `server/routes/api/[...path].ts` пробрасывает cookie, `Set-Cookie` и `Location`.
@@ -78,13 +79,14 @@ docker run --rm -v "$PWD/frontend:/app" -w /app oven/bun:1 bun run build
 - Тема только тёмная — светлую тему и переключатель не добавлять.
 - Обращения к API из браузера идут через прокси `server/routes/api/[...path].ts` (`/api/*` → `backend:3001`).
 - WebSocket подключается напрямую, базовый адрес — `runtimeConfig.public.wsBase`.
-- Каталог `components/` пока отсутствует. Авторизация: `composables/useAuth.ts` (состояние текущего юзера) и `middleware/auth.ts` (редиректы: `/` → `/dashboard` или `/login`).
+- Компоненты комнаты — `components/session/` (`RoomChat`, `Whiteboard`, `DrawingCanvas`, `MediaToolbar`, `ChatDrawer`), состояние комнаты — `composables/useRoom.ts`. Авторизация: `composables/useAuth.ts` (состояние текущего юзера) и `middleware/auth.ts` (редиректы: `/` → `/dashboard` или `/login`).
+- Изображения вайтборда грузятся напрямую с backend (`runtimeConfig.public.backendOrigin`), т.к. бинарный ответ не идёт через прокси.
 
 ## Окружение
 
 - Порты: frontend `3000`, backend `3001`, PostgreSQL `5432`.
 - Данные PostgreSQL — в persistent-томе `homework-review_postgres_data` (переживает `down`/`up`). Удаление: `make reset-db`.
-- Env: корневой `.env` (см. `.env.example`), backend `DATABASE_URL`/`PORT`/`HOST`, frontend `NUXT_PUBLIC_API_BASE`/`NUXT_PUBLIC_WS_BASE`.
+- Env: корневой `.env` (см. `.env.example`), backend `DATABASE_URL`/`PORT`/`HOST`/`UPLOAD_DIR`, frontend `NUXT_PUBLIC_API_BASE`/`NUXT_PUBLIC_WS_BASE`/`NUXT_PUBLIC_BACKEND_ORIGIN`.
 - OAuth (Яндекс): `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`, `APP_URL`, `SESSION_TTL_DAYS`, `INVITE_TTL_DAYS`, `COOKIE_SECURE`. Frontend получает `client_id` через `NUXT_PUBLIC_YANDEX_CLIENT_ID` (прокидывается из `YANDEX_CLIENT_ID`).
 
 ## Git

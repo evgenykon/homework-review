@@ -34,13 +34,41 @@ model ChatSession {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  child    User      @relation("SessionChild", fields: [childId], references: [id], onDelete: Cascade)
-  parent   User      @relation("SessionParent", fields: [parentId], references: [id], onDelete: Cascade)
+  child    User       @relation("SessionChild", fields: [childId], references: [id], onDelete: Cascade)
+  parent   User       @relation("SessionParent", fields: [parentId], references: [id], onDelete: Cascade)
   messages Message[]
+  pages    RoomPage[]
 
   @@index([childId])
   @@index([parentId])
   @@map("chat_sessions")
+}
+
+model RoomPage {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  position  Int      @default(0)
+  fileName  String   @map("file_name")
+  mimeType  String   @map("mime_type")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  strokes Stroke[]
+
+  @@index([sessionId])
+  @@map("room_pages")
+}
+
+model Stroke {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page RoomPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("strokes")
 }
 
 model User {

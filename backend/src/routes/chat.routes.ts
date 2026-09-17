@@ -8,6 +8,7 @@ export class ChatRoutes {
     app.get('/children/:childId/sessions', this.controller.listChildSessions);
     app.post('/children/:childId/sessions', this.controller.createSession);
     app.get('/sessions', this.controller.listMySessions);
+    app.get('/sessions/:id', this.controller.getSession);
     app.get('/sessions/:id/messages', this.controller.listMessages);
   }
 }

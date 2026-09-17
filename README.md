@@ -98,7 +98,7 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/health` | Проверка сервера и БД |
 | `GET` | `/api/messages` | Последние сообщения |
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
-| `WS` | `/ws?sessionId=<id>` | Чат комнаты: отправка `{ "body": "..." }`, приём `{ "type": "message", "message": {...} }` |
+| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add` |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
 | `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
 | `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
@@ -110,7 +110,13 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/children/:id/sessions` | Комнаты чата ребёнка (только родитель) |
 | `POST` | `/api/children/:id/sessions` | Создать комнату `{ "name": "..." }` |
 | `GET` | `/api/sessions` | Комнаты текущего пользователя |
+| `GET` | `/api/sessions/:id` | Комната по id |
 | `GET` | `/api/sessions/:id/messages` | Сообщения комнаты |
+| `POST` | `/api/sessions/:id/pages` | Загрузить изображение в комнату (multipart, поле `file`) |
+| `GET` | `/api/sessions/:id/pages` | Страницы комнаты с рисунками |
+| `DELETE` | `/api/pages/:pageId` | Удалить страницу (вместе с рисунками и файлом) |
+| `POST` | `/api/pages/:pageId/strokes` | Добавить штрих `{ "data": { ... } }` |
+| `GET` | `/api/pages/:pageId/image` | Изображение страницы |
 
 HTTP-запросы из браузера идут через прокси Nuxt (`/api/*` → `backend:3001`). WebSocket подключается напрямую к backend.
 
@@ -142,6 +148,18 @@ Redirect-флоу (тоже поддерживается):
 
 Таблицы: `chat_sessions` (комната: `name`, `child_id`, `parent_id`), `messages` (`session_id`, `sender_id`, `body`).
 
+### Вайтборд
+
+Страница `/sessions/:id` — вайтборд: слева область с фотографиями и рисованием, справа (на десктопе) чат; на планшете и мобильных чат открывается кнопкой снизу.
+
+- Фото загружаются файлом, снимком с камеры (`capture`) или drag&drop; при добавлении появляются миниатюры-страницы внизу, переключение по клику.
+- Рисование — отдельным слоем поверх фото (canvas), штрихи хранятся в координатах изображения.
+- Зум/панорама: колесо/ pinch и перетаскивание.
+- Изображения сохраняются на диск в `UPLOAD_DIR` (в dev — каталог `uploads/` в корне репозитория, примонтирован в контейнер, в `.gitignore`).
+- Синхронизация: после завершения линии штрих сохраняется (`POST /pages/:id/strokes`) и рассылается в комнату событием `stroke:add`; добавление/удаление страниц — `page:add`/`page:remove`.
+
+Таблицы: `room_pages` (`session_id`, `position`, `file_name`, `mime_type`), `strokes` (`page_id`, `data` JSON). При удалении страницы рисунки удаляются каскадом, файл — с диска.
+
 ### Регистрация приложения в Яндексе
 
 В консоли Яндекс OAuth (https://oauth.yandex.ru/) при создании приложения:
@@ -171,6 +189,7 @@ Redirect URI сверяется точно по схеме, хосту, порт
 | `APP_URL` | `http://localhost:3000` | Куда редиректить после входа |
 | `SESSION_TTL_DAYS` | `30` | Время жизни сессии |
 | `INVITE_TTL_DAYS` | `7` | Время жизни инвайта |
+| `UPLOAD_DIR` | `/data/uploads` | Каталог для загруженных изображений (в контейнере) |
 | `COOKIE_SECURE` | `false` | Флаг `Secure` у cookie (включить за HTTPS) |
 | `YANDEX_CLIENT_ID` | — | Client ID приложения Яндекса |
 | `YANDEX_CLIENT_SECRET` | — | Client Secret приложения Яндекса |

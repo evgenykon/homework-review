@@ -45,6 +45,20 @@ export class ChatController {
     reply.send(await this.sessions.listForUser(user));
   };
 
+  getSession = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const user = await this.requireUser(request);
+    const session = await this.sessions.findAccessible(request.params.id, user);
+
+    if (!session) {
+      throw request.server.httpErrors.notFound('Session not found');
+    }
+
+    reply.send(session);
+  };
+
   listMessages = async (
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,

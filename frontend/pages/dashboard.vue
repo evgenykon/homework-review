@@ -43,7 +43,7 @@
           >
             <span class="text-gray-100">{{ room.name }}</span>
             <span class="text-xs text-gray-500">
-              {{ new Date(room.createdAt).toLocaleDateString() }}
+              <ClientOnly>{{ formatDate(room.createdAt) }}</ClientOnly>
             </span>
           </NuxtLink>
         </li>

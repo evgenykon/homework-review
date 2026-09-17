@@ -3,6 +3,7 @@ node_modules/
 .output/
 dist/
 generated/
+uploads/
 .idea/
 .env
 .env.local

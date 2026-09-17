@@ -5,7 +5,8 @@ services:
       target: production
     environment:
       NODE_ENV: production
-    volumes: !reset []
+    volumes: !override
+      - ./uploads:/data/uploads
 
   frontend:
     build:

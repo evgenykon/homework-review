@@ -4,13 +4,25 @@ export default defineEventHandler(async (event) => {
   const path = url.pathname.replace(/^\/api/, '')
   const method = event.method
   const cookie = getHeader(event, 'cookie')
+  const contentType = getHeader(event, 'content-type')
 
-  const body = method === 'GET' || method === 'HEAD' ? undefined : await readBody(event)
+  const headers: Record<string, string> = {}
+
+  if (cookie) {
+    headers.cookie = cookie
+  }
+
+  if (contentType) {
+    headers['content-type'] = contentType
+  }
+
+  const body =
+    method === 'GET' || method === 'HEAD' ? undefined : await readRawBody(event, false)
 
   const response = await $fetch.raw(`${config.public.apiBase}/api${path}${url.search}`, {
     method,
     body,
-    headers: cookie ? { cookie } : undefined,
+    headers,
     redirect: 'manual',
     ignoreResponseError: true,
   })

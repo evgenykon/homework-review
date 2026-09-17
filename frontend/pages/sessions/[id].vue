@@ -1,122 +1,169 @@
 <template>
-  <section class="space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-3xl font-bold text-gray-100">
-        Чат
-      </h1>
+  <div class="flex h-full min-h-0 flex-col">
+    <header class="flex h-14 shrink-0 items-center justify-between border-b border-gray-800 px-4">
       <NuxtLink
         to="/dashboard"
-        class="text-sm text-gray-400 transition-colors hover:text-gray-200"
+        class="shrink-0 text-sm text-gray-400 transition-colors hover:text-gray-200"
       >
         Назад
       </NuxtLink>
-    </div>
+      <span class="truncate px-4 text-sm font-medium text-gray-200">
+        {{ session?.name ?? 'Комната' }}
+      </span>
+      <span class="w-10 shrink-0" />
+    </header>
 
-    <div class="app-card max-w-xl space-y-4">
-      <div class="max-h-96 space-y-2 overflow-y-auto">
-        <p v-if="!messages.length" class="text-sm text-gray-400">
-          Сообщений пока нет.
-        </p>
+    <div class="flex min-h-0 flex-1">
+      <div class="flex min-h-0 flex-1 flex-col">
+        <Whiteboard
+          :current-page="currentPage"
+          :drawing-enabled="drawingEnabled"
+          :draw-color="drawColor"
+          :draw-mode="drawMode"
+          :backend-origin="backendOrigin"
+          @pick-files="fileInput?.click()"
+          @capture="cameraInput?.click()"
+          @upload="uploadPages"
+          @add-stroke="onStroke"
+        />
 
-        <div
-          v-for="message in messages"
-          :key="message.id"
-          class="rounded-md bg-white/5 px-3 py-2"
-        >
-          <p class="text-sm text-gray-100">
-            {{ message.body }}
-          </p>
-          <p class="mt-1 text-xs text-gray-500">
-            {{ message.senderId === user?.id ? 'Вы' : 'Собеседник' }}
-            · {{ new Date(message.createdAt).toLocaleTimeString() }}
-          </p>
-        </div>
+        <DrawingToolbar
+          v-if="drawingEnabled"
+          :selected-color="drawColor"
+          :mode="drawMode"
+          :can-undo="canUndo"
+          @select-color="selectColor"
+          @toggle-eraser="toggleEraser"
+          @undo="undo"
+        />
+
+        <MediaToolbar
+          :pages="pages"
+          :current-page-id="currentPageId"
+          :drawing-enabled="drawingEnabled"
+          :backend-origin="backendOrigin"
+          @pick-files="fileInput?.click()"
+          @capture="cameraInput?.click()"
+          @toggle-drawing="drawingEnabled = !drawingEnabled"
+          @select-page="selectPage"
+          @delete-page="deletePage"
+          @toggle-chat="chatOpen = true"
+        />
       </div>
 
-      <form class="flex gap-2" @submit.prevent="send">
-        <input
-          v-model="draft"
-          type="text"
-          placeholder="Сообщение"
-          class="flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
-        >
-        <button
-          type="submit"
-          :disabled="!connected || !draft.trim()"
-          class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
-        >
-          Отправить
-        </button>
-      </form>
-
-      <p class="text-xs text-gray-500">
-        {{ connected ? 'Подключено' : 'Подключение…' }}
-      </p>
+      <aside class="hidden w-96 shrink-0 flex-col border-l border-gray-800 lg:flex">
+        <RoomChat
+          :messages="messages"
+          :connected="connected"
+          :current-user-id="user?.id"
+          @send="sendMessage"
+        />
+      </aside>
     </div>
-  </section>
+
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      multiple
+      class="hidden"
+      @change="onFileChange"
+    >
+    <input
+      ref="cameraInput"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      class="hidden"
+      @change="onFileChange"
+    >
+
+    <ChatDrawer
+      :open="chatOpen"
+      :messages="messages"
+      :connected="connected"
+      :current-user-id="user?.id"
+      @close="chatOpen = false"
+      @send="sendMessage"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-type ChatMessage = {
-  id: number
-  sessionId: string
-  senderId: string
-  body: string
-  createdAt: string
-}
+import type { StrokeData } from '~/composables/useRoom'
 
-definePageMeta({ middleware: 'auth' })
+definePageMeta({ middleware: 'auth', layout: 'session' })
 
 const route = useRoute()
 const sessionId = route.params.id as string
-const { user } = useAuth()
+
+const {
+  user,
+  session,
+  messages,
+  pages,
+  currentPage,
+  currentPageId,
+  connected,
+  load,
+  connect,
+  sendMessage,
+  uploadPages,
+  deletePage,
+  addStroke,
+  undoLastStroke,
+} = useRoom(sessionId)
+
+await load()
+
 const config = useRuntimeConfig()
+const backendOrigin = config.public.backendOrigin
 
-const { data: initial } = await useFetch(`/api/sessions/${sessionId}/messages`, {
-  headers: useRequestHeaders(['cookie']),
-  ignoreResponseError: true,
-  transform: (data): ChatMessage[] => (Array.isArray(data) ? (data as ChatMessage[]) : []),
-})
+const drawingEnabled = ref(false)
+const drawColor = ref('#000000')
+const drawMode = ref<'draw' | 'erase'>('draw')
+const chatOpen = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const cameraInput = ref<HTMLInputElement | null>(null)
 
-const messages = ref<ChatMessage[]>(initial.value ?? [])
-const draft = ref('')
-const connected = ref(false)
-let socket: WebSocket | null = null
+const canUndo = computed(() => (currentPage.value?.strokes.length ?? 0) > 0)
 
-onMounted(() => {
-  socket = new WebSocket(`${config.public.wsBase}/ws?sessionId=${encodeURIComponent(sessionId)}`)
+onMounted(connect)
 
-  socket.addEventListener('open', () => {
-    connected.value = true
-  })
-
-  socket.addEventListener('close', () => {
-    connected.value = false
-  })
-
-  socket.addEventListener('message', (event) => {
-    const payload = JSON.parse(event.data as string) as { type: string; message?: ChatMessage }
-
-    if (payload.type === 'message' && payload.message) {
-      messages.value.push(payload.message)
-    }
-  })
-})
-
-onBeforeUnmount(() => {
-  socket?.close()
-})
-
-const send = () => {
-  const body = draft.value.trim()
-
-  if (!body || !socket || socket.readyState !== WebSocket.OPEN) {
-    return
-  }
-
-  socket.send(JSON.stringify({ body }))
-  draft.value = ''
+const selectColor = (color: string) => {
+  drawColor.value = color
+  drawMode.value = 'draw'
 }
 
-useHead({ title: 'Чат' })
+const toggleEraser = () => {
+  drawMode.value = drawMode.value === 'erase' ? 'draw' : 'erase'
+}
+
+const undo = async () => {
+  if (currentPage.value) {
+    await undoLastStroke(currentPage.value.id)
+  }
+}
+
+const onFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+
+  if (files.length) {
+    await uploadPages(files)
+  }
+}
+
+const onStroke = async (data: StrokeData) => {
+  if (currentPage.value) {
+    await addStroke(currentPage.value.id, data)
+  }
+}
+
+const selectPage = (id: string) => {
+  currentPageId.value = id
+}
+
+useHead({ title: computed(() => session.value?.name ?? 'Комната') })
 </script>

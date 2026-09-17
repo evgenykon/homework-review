@@ -8,6 +8,7 @@ export type AppConfig = {
   port: number;
   host: string;
   appUrl: string;
+  uploadDir: string;
   sessionTtlMs: number;
   inviteTtlMs: number;
   cookieSecure: boolean;
@@ -21,6 +22,7 @@ export function loadConfig(): AppConfig {
     port: Number(process.env.PORT ?? 3001),
     host: process.env.HOST ?? '0.0.0.0',
     appUrl: process.env.APP_URL ?? 'http://localhost:3000',
+    uploadDir: process.env.UPLOAD_DIR ?? '/data/uploads',
     sessionTtlMs: Number(process.env.SESSION_TTL_DAYS ?? 30) * DAY_MS,
     inviteTtlMs: Number(process.env.INVITE_TTL_DAYS ?? 7) * DAY_MS,
     cookieSecure: process.env.COOKIE_SECURE === 'true',

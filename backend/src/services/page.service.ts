@@ -1,0 +1,132 @@
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import type { Prisma, RoomPage, Stroke, User } from '../../generated/prisma/client';
+import type { AppConfig } from '../config/env';
+import type { RoomPageRepository, RoomPageWithStrokes } from '../repositories/room-page.repository';
+import type { StrokeRepository } from '../repositories/stroke.repository';
+import type { ChatService } from './chat.service';
+import type { ChatSessionService } from './chat-session.service';
+import type { RealtimeService } from './realtime.service';
+
+export type UploadedImage = {
+  fileName: string;
+  mimeType: string;
+  data: Buffer;
+};
+
+function extensionFor(fileName: string, mimeType: string): string {
+  const fromName = extname(fileName).toLowerCase();
+
+  if (fromName) {
+    return fromName;
+  }
+
+  if (mimeType === 'image/png') {
+    return '.png';
+  }
+
+  if (mimeType === 'image/webp') {
+    return '.webp';
+  }
+
+  if (mimeType === 'image/gif') {
+    return '.gif';
+  }
+
+  return '.jpg';
+}
+
+export class PageService {
+  constructor(
+    private readonly config: AppConfig,
+    private readonly pages: RoomPageRepository,
+    private readonly strokes: StrokeRepository,
+    private readonly sessions: ChatSessionService,
+    private readonly chat: ChatService,
+    private readonly realtime: RealtimeService,
+  ) {}
+
+  list(sessionId: string): Promise<RoomPageWithStrokes[]> {
+    return this.pages.findBySession(sessionId);
+  }
+
+  async create(sessionId: string, user: User, image: UploadedImage): Promise<RoomPage> {
+    await mkdir(this.config.uploadDir, { recursive: true });
+
+    const fileName = `${randomUUID()}${extensionFor(image.fileName, image.mimeType)}`;
+    await writeFile(join(this.config.uploadDir, fileName), image.data);
+
+    const position = await this.pages.countBySession(sessionId);
+    const page = await this.pages.create({
+      sessionId,
+      position,
+      fileName,
+      mimeType: image.mimeType,
+    });
+
+    this.realtime.broadcastToSession(sessionId, { type: 'page:add', page });
+    await this.chat.createMessage(sessionId, user.id, `${user.name} добавил изображение`);
+
+    return page;
+  }
+
+  async remove(page: RoomPage): Promise<void> {
+    await this.pages.delete(page.id);
+    await this.removeFile(page.fileName);
+    this.realtime.broadcastToSession(page.sessionId, { type: 'page:remove', pageId: page.id });
+  }
+
+  async addStroke(page: RoomPage, data: Prisma.InputJsonValue): Promise<Stroke> {
+    const stroke = await this.strokes.create(page.id, data);
+    this.realtime.broadcastToSession(page.sessionId, { type: 'stroke:add', stroke });
+    return stroke;
+  }
+
+  async removeStroke(strokeId: string, user: User): Promise<boolean> {
+    const stroke = await this.strokes.findById(strokeId);
+
+    if (!stroke) {
+      return false;
+    }
+
+    const page = await this.findAccessiblePage(stroke.pageId, user);
+
+    if (!page) {
+      return false;
+    }
+
+    await this.strokes.delete(stroke.id);
+    this.realtime.broadcastToSession(page.sessionId, { type: 'stroke:remove', strokeId: stroke.id });
+
+    return true;
+  }
+
+  async findAccessiblePage(pageId: string, user: User): Promise<RoomPage | null> {
+    const page = await this.pages.findById(pageId);
+
+    if (!page) {
+      return null;
+    }
+
+    const session = await this.sessions.findAccessible(page.sessionId, user);
+
+    return session ? page : null;
+  }
+
+  async readImage(page: RoomPage): Promise<Buffer | null> {
+    try {
+      return await readFile(join(this.config.uploadDir, page.fileName));
+    } catch {
+      return null;
+    }
+  }
+
+  private async removeFile(fileName: string): Promise<void> {
+    try {
+      await unlink(join(this.config.uploadDir, fileName));
+    } catch {
+      // файл уже удалён — игнорируем
+    }
+  }
+}

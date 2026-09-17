@@ -7,10 +7,64 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserType {
+  parent
+  child
+}
+
 model Message {
   id        Int      @id @default(autoincrement())
   body      String
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("messages")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  photoUrl  String?  @map("photo_url")
+  age       Int?
+  type      UserType
+  parentId  String?  @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   User?  @relation("UserChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children User[] @relation("UserChildren")
+
+  accounts OAuthAccount[]
+  sessions Session[]
+
+  @@index([parentId])
+  @@map("users")
+}
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  provider          String
+  providerAccountId String   @map("provider_account_id")
+  email             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }

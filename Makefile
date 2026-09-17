@@ -3,19 +3,21 @@ PROD_COMPOSE ?= docker compose -f docker-compose.yml -f docker-compose.prod.yml
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build dev up down logs ps restart prod build-prod install typecheck db-generate db-migrate db-deploy db-shell backend-shell frontend-shell clean reset-db
+.PHONY: help build build-dev build-prod dev up down logs ps restart prod install typecheck db-generate db-migrate db-deploy db-shell backend-shell frontend-shell clean reset-db
 
 help: ## Показать список команд
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-build: ## Собрать dev-образы
+build: build-dev ## Собрать dev-образы (алиас build-dev)
+
+build-dev: ## Собрать dev-образы
 	$(COMPOSE) build
 
-dev: ## Запустить dev-окружение с hot-reload (foreground)
-	$(COMPOSE) up --build
+dev: build-dev ## Запустить dev-окружение с hot-reload (foreground)
+	$(COMPOSE) up
 
-up: ## Запустить dev-окружение в фоне
-	$(COMPOSE) up -d --build
+up: build-dev ## Собрать dev-образы и запустить dev-окружение в фоне
+	$(COMPOSE) up -d
 
 down: ## Остановить контейнеры
 	$(COMPOSE) down

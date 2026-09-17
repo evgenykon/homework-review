@@ -1,6 +1,15 @@
 $radius: 0.5rem;
 $transition: 200ms ease;
 
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
 @mixin surface {
   border-radius: $radius;
   transition: background-color $transition, box-shadow $transition;
@@ -9,28 +18,6 @@ $transition: 200ms ease;
 .app-card {
   @include surface;
   padding: 1.5rem;
-  background-color: #ffffff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
-
-  .dark & {
-    background-color: #1f2937;
-  }
-}
-
-.app-button {
-  @include surface;
-  color: #4b5563;
-  cursor: pointer;
-
-  &:hover {
-    background-color: rgb(0 0 0 / 0.05);
-  }
-
-  .dark & {
-    color: #d1d5db;
-  }
-
-  .dark &:hover {
-    background-color: rgb(255 255 255 / 0.1);
-  }
+  background-color: #1f2937;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
 }

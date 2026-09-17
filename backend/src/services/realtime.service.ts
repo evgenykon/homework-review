@@ -6,14 +6,31 @@ export type RealtimeEvent = {
 };
 
 export class RealtimeService {
-  private readonly clients = new Set<WebSocket>();
+  private readonly rooms = new Map<string, Set<WebSocket>>();
 
-  add(client: WebSocket): void {
-    this.clients.add(client);
+  join(sessionId: string, client: WebSocket): void {
+    let room = this.rooms.get(sessionId);
+
+    if (!room) {
+      room = new Set();
+      this.rooms.set(sessionId, room);
+    }
+
+    room.add(client);
   }
 
-  remove(client: WebSocket): void {
-    this.clients.delete(client);
+  leave(sessionId: string, client: WebSocket): void {
+    const room = this.rooms.get(sessionId);
+
+    if (!room) {
+      return;
+    }
+
+    room.delete(client);
+
+    if (room.size === 0) {
+      this.rooms.delete(sessionId);
+    }
   }
 
   send(client: WebSocket, event: RealtimeEvent): void {
@@ -22,14 +39,20 @@ export class RealtimeService {
     }
   }
 
-  broadcast(event: RealtimeEvent): void {
+  broadcastToSession(sessionId: string, event: RealtimeEvent): void {
+    const room = this.rooms.get(sessionId);
+
+    if (!room) {
+      return;
+    }
+
     const payload = JSON.stringify(event);
 
-    for (const client of this.clients) {
+    for (const client of room) {
       if (client.readyState === client.OPEN) {
         client.send(payload);
       } else {
-        this.clients.delete(client);
+        room.delete(client);
       }
     }
   }

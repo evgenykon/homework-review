@@ -6,11 +6,12 @@ import websocket from '@fastify/websocket';
 import { loadConfig } from './config/env';
 import { prisma } from './config/prisma';
 import { AuthController } from './controllers/auth.controller';
+import { ChatController } from './controllers/chat.controller';
 import { ChildController } from './controllers/child.controller';
 import { HealthController } from './controllers/health.controller';
 import { InviteController } from './controllers/invite.controller';
-import { MessageController } from './controllers/message.controller';
 import { SocketHandler } from './handlers/socket.handler';
+import { ChatSessionRepository } from './repositories/chat-session.repository';
 import { HealthRepository } from './repositories/health.repository';
 import { InviteRepository } from './repositories/invite.repository';
 import { MessageRepository } from './repositories/message.repository';
@@ -18,16 +19,17 @@ import { OAuthAccountRepository } from './repositories/oauth-account.repository'
 import { SessionRepository } from './repositories/session.repository';
 import { UserRepository } from './repositories/user.repository';
 import { AuthRoutes } from './routes/auth.routes';
+import { ChatRoutes } from './routes/chat.routes';
 import { ChildRoutes } from './routes/child.routes';
 import { HealthRoutes } from './routes/health.routes';
 import { InviteRoutes } from './routes/invite.routes';
-import { MessageRoutes } from './routes/message.routes';
 import { WsRoutes } from './routes/ws.routes';
 import { AuthService } from './services/auth.service';
+import { ChatService } from './services/chat.service';
+import { ChatSessionService } from './services/chat-session.service';
 import { ChildService } from './services/child.service';
 import { HealthService } from './services/health.service';
 import { InviteService } from './services/invite.service';
-import { MessageService } from './services/message.service';
 import { RealtimeService } from './services/realtime.service';
 import { YandexOAuthService } from './services/yandex-oauth.service';
 
@@ -42,6 +44,7 @@ await server.register(websocket);
 const realtime = new RealtimeService();
 const healthRepository = new HealthRepository(prisma);
 const messageRepository = new MessageRepository(prisma);
+const chatSessionRepository = new ChatSessionRepository(prisma);
 const userRepository = new UserRepository(prisma);
 const oauthAccountRepository = new OAuthAccountRepository(prisma);
 const sessionRepository = new SessionRepository(prisma);
@@ -49,7 +52,8 @@ const inviteRepository = new InviteRepository(prisma);
 const yandexOAuthService = new YandexOAuthService(config.yandex);
 
 const healthService = new HealthService(healthRepository);
-const messageService = new MessageService(messageRepository, realtime);
+const chatService = new ChatService(messageRepository, realtime);
+const chatSessionService = new ChatSessionService(chatSessionRepository, userRepository);
 const inviteService = new InviteService(config, inviteRepository);
 const childService = new ChildService(userRepository);
 const authService = new AuthService(
@@ -62,19 +66,19 @@ const authService = new AuthService(
 );
 
 const healthController = new HealthController(healthService);
-const messageController = new MessageController(messageService);
+const chatController = new ChatController(chatSessionService, chatService, authService);
 const authController = new AuthController(authService);
 const inviteController = new InviteController(inviteService, authService);
 const childController = new ChildController(childService, authService);
-const socketHandler = new SocketHandler(messageService, realtime);
+const socketHandler = new SocketHandler(authService, chatSessionService, chatService, realtime);
 
 await server.register(
   async (api) => {
     new HealthRoutes(healthController).register(api);
-    new MessageRoutes(messageController).register(api);
     new AuthRoutes(authController).register(api);
     new InviteRoutes(inviteController).register(api);
     new ChildRoutes(childController).register(api);
+    new ChatRoutes(chatController).register(api);
   },
   { prefix: '/api' },
 );

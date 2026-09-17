@@ -65,6 +65,8 @@ docker run --rm -v "$PWD/frontend:/app" -w /app oven/bun:1 bun run build
 - Сессии хранятся в таблице `sessions`; токен передаётся в httpOnly-cookie `sid`. Cookie ставится/чистится в `auth.controller.ts`.
 - Роли: enum `UserType` (`parent`, `child`); связь родитель→ребёнок через `users.parent_id` (self-relation).
 - Инвайты: `src/services/invite.service.ts` + `invite.repository.ts`; родитель создаёт ссылку (`POST /invites`), при входе ребёнка инвайт привязывает его к родителю и помечается использованным (таблица `invites`).
+- Дети: `src/services/child.service.ts` + `UserRepository.findChildren/findChild`; `GET /children`, `GET /children/:id` — только для родителя.
+- Чат: `chat-session.service.ts`/`chat-session.repository.ts` (комнаты `chat_sessions`) и `chat.service.ts`/`message.repository.ts` (сообщения `messages`); WebSocket `/ws?sessionId=<id>` авторизуется по cookie `sid`, проверяет доступ к комнате и держит комнаты в `realtime.service.ts`. Контроллер — `chat.controller.ts`, маршруты — `chat.routes.ts`.
 - `state` OAuth кладётся в httpOnly-cookie `oauth_state` и проверяется в callback (CSRF).
 - Новые эндпоинты добавляй в `src/routes/auth.routes.ts` → `AuthController` → `AuthService`.
 - OAuth-редиректы идут через Nuxt-прокси, поэтому `server/routes/api/[...path].ts` пробрасывает cookie, `Set-Cookie` и `Location`.

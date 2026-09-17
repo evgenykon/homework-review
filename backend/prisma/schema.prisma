@@ -14,10 +14,33 @@ enum UserType {
 
 model Message {
   id        Int      @id @default(autoincrement())
+  sessionId String   @map("session_id")
+  senderId  String   @map("sender_id")
   body      String
   createdAt DateTime @default(now()) @map("created_at")
 
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender  User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
   @@map("messages")
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  name      String
+  childId   String   @map("child_id")
+  parentId  String   @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  child    User      @relation("SessionChild", fields: [childId], references: [id], onDelete: Cascade)
+  parent   User      @relation("SessionParent", fields: [parentId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([childId])
+  @@index([parentId])
+  @@map("chat_sessions")
 }
 
 model User {
@@ -38,6 +61,10 @@ model User {
 
   invites     Invite[] @relation("InviteParent")
   usedInvites Invite[] @relation("InviteUsedBy")
+
+  childSessions  ChatSession[] @relation("SessionChild")
+  parentSessions ChatSession[] @relation("SessionParent")
+  messages       Message[]     @relation("MessageSender")
 
   @@index([parentId])
   @@map("users")

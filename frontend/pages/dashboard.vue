@@ -1,10 +1,6 @@
 <template>
-  <section class="space-y-6">
-    <h1 class="text-3xl font-bold text-gray-100">
-      Dashboard
-    </h1>
-
-    <div class="app-card max-w-md space-y-4">
+  <section class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="app-card space-y-4">
       <div v-if="user" class="flex items-center gap-3">
         <img
           v-if="user.photoUrl"
@@ -30,7 +26,31 @@
       </button>
     </div>
 
-    <div v-if="user?.type === 'parent'" class="app-card max-w-md space-y-3">
+    <div class="app-card space-y-3">
+      <h2 class="text-lg font-semibold text-gray-100">
+        Комнаты
+      </h2>
+
+      <p v-if="!rooms.length" class="text-sm text-gray-400">
+        Пока нет комнат.
+      </p>
+
+      <ul v-else class="space-y-1">
+        <li v-for="room in rooms" :key="room.id">
+          <NuxtLink
+            :to="`/sessions/${room.id}`"
+            class="flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-white/5"
+          >
+            <span class="text-gray-100">{{ room.name }}</span>
+            <span class="text-xs text-gray-500">
+              {{ new Date(room.createdAt).toLocaleDateString() }}
+            </span>
+          </NuxtLink>
+        </li>
+      </ul>
+    </div>
+
+    <div v-if="user?.type === 'parent'" class="app-card space-y-3">
       <h2 class="text-lg font-semibold text-gray-100">
         Дети
       </h2>
@@ -62,7 +82,7 @@
       </ul>
     </div>
 
-    <div v-if="user?.type === 'parent'" class="app-card max-w-md space-y-4">
+    <div v-if="user?.type === 'parent'" class="app-card space-y-4">
       <div>
         <h2 class="text-lg font-semibold text-gray-100">
           Пригласить ребёнка
@@ -114,6 +134,14 @@ type Child = {
   age: number | null
 }
 
+type ChatSession = {
+  id: string
+  name: string
+  childId: string
+  parentId: string
+  createdAt: string
+}
+
 type Invite = {
   token: string
   url: string
@@ -122,7 +150,7 @@ type Invite = {
 
 definePageMeta({ middleware: 'auth' })
 
-useHead({ title: 'Dashboard' })
+useHead({ title: 'Homework Review' })
 
 const { user, logout } = useAuth()
 
@@ -130,6 +158,12 @@ const { data: children } = await useFetch('/api/children', {
   headers: useRequestHeaders(['cookie']),
   ignoreResponseError: true,
   transform: (data): Child[] => (Array.isArray(data) ? (data as Child[]) : []),
+})
+
+const { data: rooms } = await useFetch('/api/sessions', {
+  headers: useRequestHeaders(['cookie']),
+  ignoreResponseError: true,
+  transform: (data): ChatSession[] => (Array.isArray(data) ? (data as ChatSession[]) : []),
 })
 
 const loading = ref(false)

@@ -98,13 +98,19 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/health` | Проверка сервера и БД |
 | `GET` | `/api/messages` | Последние сообщения |
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
-| `WS` | `/ws` | Отправка `{ "body": "..." }`, приём `{ "type": "message", ... }` |
+| `WS` | `/ws?sessionId=<id>` | Чат комнаты: отправка `{ "body": "..." }`, приём `{ "type": "message", "message": {...} }` |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
 | `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
 | `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
 | `GET` | `/api/auth/me` | Текущий пользователь (по сессии) |
 | `POST` | `/api/auth/logout` | Завершить сессию |
 | `POST` | `/api/invites` | Создать инвайт для ребёнка (только роль `parent`) |
+| `GET` | `/api/children` | Список детей текущего родителя |
+| `GET` | `/api/children/:id` | Ребёнок по id (только свой) |
+| `GET` | `/api/children/:id/sessions` | Комнаты чата ребёнка (только родитель) |
+| `POST` | `/api/children/:id/sessions` | Создать комнату `{ "name": "..." }` |
+| `GET` | `/api/sessions` | Комнаты текущего пользователя |
+| `GET` | `/api/sessions/:id/messages` | Сообщения комнаты |
 
 HTTP-запросы из браузера идут через прокси Nuxt (`/api/*` → `backend:3001`). WebSocket подключается напрямую к backend.
 
@@ -127,6 +133,14 @@ Redirect-флоу (тоже поддерживается):
 ### Инвайты
 
 Родитель на `/dashboard` нажимает «Сгенерировать инвайт» → `POST /api/invites` создаёт запись в `invites` и возвращает ссылку вида `http://localhost:3000/login?invite=<token>`. Ребёнок открывает ссылку, входит через Яндекс, и при входе backend привязывает его к родителю (`users.parent_id`, роль `child`), после чего инвайт помечается использованным. Инвайт одноразовый и истекает через `INVITE_TTL_DAYS`.
+
+### Дети и комнаты
+
+На `/dashboard` родитель видит список своих детей (`GET /api/children`). Клик по ребёнку ведёт на `/children/:id`, где родитель может создать комнату чата (кнопка «Создать чат» → модалка с названием → `POST /api/children/:id/sessions`). Созданная комната сразу появляется и в дашборде ребёнка (`GET /api/sessions`).
+
+Страница комнаты `/sessions/:id` подключается к WebSocket `/ws?sessionId=<id>` (авторизация по cookie `sid`). Отправленные сообщения сохраняются в `messages` с привязкой к сессии и отправителю и рассылаются всем участникам комнаты.
+
+Таблицы: `chat_sessions` (комната: `name`, `child_id`, `parent_id`), `messages` (`session_id`, `sender_id`, `body`).
 
 ### Регистрация приложения в Яндексе
 

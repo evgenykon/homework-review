@@ -5,8 +5,8 @@ export class WsRoutes {
   constructor(private readonly handler: SocketHandler) {}
 
   register(app: FastifyInstance): void {
-    app.get('/ws', { websocket: true }, (socket) => {
-      this.handler.handleConnection(socket);
+    app.get('/ws', { websocket: true }, (socket, request) => {
+      void this.handler.handleConnection(socket, request);
     });
   }
 }

@@ -41,6 +41,7 @@ export type RoomSession = {
   id: string
   name: string
   status: ReviewStatus
+  archivedAt: string | null
   childId: string
   parentId: string
   createdAt: string
@@ -54,6 +55,7 @@ type RoomEvent = {
   stroke?: Stroke
   strokeId?: string
   session?: RoomSession
+  sessionId?: string
 }
 
 export function useRoom(sessionId: string) {
@@ -120,11 +122,12 @@ export function useRoom(sessionId: string) {
       connected.value = false
     })
 
-    socket.addEventListener('message', (event) => {
+    socket.addEventListener('message', async (event) => {
       const payload = JSON.parse(event.data as string) as RoomEvent
 
       if (payload.type === 'message' && payload.message) {
         messages.value.push(payload.message)
+        void markRead()
       } else if (payload.type === 'page:add' && payload.page) {
         const page: RoomPage = { ...payload.page, strokes: [] }
         pages.value.push(page)
@@ -144,6 +147,8 @@ export function useRoom(sessionId: string) {
         }
       } else if (payload.type === 'session:update' && payload.session) {
         session.value = payload.session
+      } else if (payload.type === 'session:deleted' && payload.sessionId === sessionId) {
+        await navigateTo('/dashboard')
       }
     })
   }
@@ -209,6 +214,28 @@ export function useRoom(sessionId: string) {
     }
   }
 
+  const archive = async () => {
+    await $fetch(`/api/sessions/${sessionId}/archive`, { method: 'POST' })
+  }
+
+  const restore = async () => {
+    const updated = await $fetch<RoomSession>(`/api/sessions/${sessionId}/restore`, {
+      method: 'POST',
+    })
+
+    if (updated && typeof updated === 'object' && 'id' in updated) {
+      session.value = updated
+    }
+  }
+
+  const remove = async () => {
+    await $fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' })
+  }
+
+  const markRead = async () => {
+    await $fetch(`/api/sessions/${sessionId}/read`, { method: 'POST' })
+  }
+
   const imageUrl = (pageId: string) => `${config.public.backendOrigin}/api/pages/${pageId}/image`
 
   onBeforeUnmount(() => {
@@ -231,6 +258,10 @@ export function useRoom(sessionId: string) {
     addStroke,
     undoLastStroke,
     review,
+    archive,
+    restore,
+    remove,
+    markRead,
     imageUrl,
   }
 }

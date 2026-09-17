@@ -21,4 +21,24 @@ export class MessageRepository {
   create(data: CreateMessageData): Promise<Message> {
     return this.prisma.message.create({ data });
   }
+
+  countUnread(sessionId: string, lastReadMessageId: number, senderId: string): Promise<number> {
+    return this.prisma.message.count({
+      where: {
+        sessionId,
+        id: { gt: lastReadMessageId },
+        senderId: { not: senderId },
+      },
+    });
+  }
+
+  async maxId(sessionId: string): Promise<number> {
+    const last = await this.prisma.message.findFirst({
+      where: { sessionId },
+      orderBy: { id: 'desc' },
+      select: { id: true },
+    });
+
+    return last?.id ?? 0;
+  }
 }

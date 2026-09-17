@@ -1,13 +1,12 @@
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
+import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Prisma, RoomPage, Stroke, User } from '../../generated/prisma/client';
-import type { AppConfig } from '../config/env';
 import type { RoomPageRepository, RoomPageWithStrokes } from '../repositories/room-page.repository';
 import type { StrokeRepository } from '../repositories/stroke.repository';
 import type { ChatService } from './chat.service';
 import type { ChatSessionService } from './chat-session.service';
 import type { RealtimeService } from './realtime.service';
+import type { StorageService } from './storage.service';
 
 export type UploadedImage = {
   fileName: string;
@@ -39,7 +38,7 @@ function extensionFor(fileName: string, mimeType: string): string {
 
 export class PageService {
   constructor(
-    private readonly config: AppConfig,
+    private readonly storage: StorageService,
     private readonly pages: RoomPageRepository,
     private readonly strokes: StrokeRepository,
     private readonly sessions: ChatSessionService,
@@ -52,10 +51,8 @@ export class PageService {
   }
 
   async create(sessionId: string, user: User, image: UploadedImage): Promise<RoomPage> {
-    await mkdir(this.config.uploadDir, { recursive: true });
-
     const fileName = `${randomUUID()}${extensionFor(image.fileName, image.mimeType)}`;
-    await writeFile(join(this.config.uploadDir, fileName), image.data);
+    await this.storage.save(fileName, image.data);
 
     const position = await this.pages.countBySession(sessionId);
     const page = await this.pages.create({
@@ -78,7 +75,7 @@ export class PageService {
 
   async remove(page: RoomPage): Promise<void> {
     await this.pages.delete(page.id);
-    await this.removeFile(page.fileName);
+    await this.storage.remove(page.fileName);
     this.realtime.broadcastToSession(page.sessionId, { type: 'page:remove', pageId: page.id });
   }
 
@@ -119,19 +116,7 @@ export class PageService {
     return session ? page : null;
   }
 
-  async readImage(page: RoomPage): Promise<Buffer | null> {
-    try {
-      return await readFile(join(this.config.uploadDir, page.fileName));
-    } catch {
-      return null;
-    }
-  }
-
-  private async removeFile(fileName: string): Promise<void> {
-    try {
-      await unlink(join(this.config.uploadDir, fileName));
-    } catch {
-      // файл уже удалён — игнорируем
-    }
+  readImage(page: RoomPage): Promise<Buffer | null> {
+    return this.storage.read(page.fileName);
   }
 }

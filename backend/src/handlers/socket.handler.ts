@@ -20,19 +20,23 @@ export class SocketHandler {
 
   handleConnection = async (socket: WebSocket, request: FastifyRequest): Promise<void> => {
     const { sessionId } = request.query as WsQuery;
-
-    if (!sessionId) {
-      this.realtime.send(socket, { type: 'error', message: 'sessionId is required' });
-      socket.close();
-      return;
-    }
-
     const token = request.cookies[SESSION_COOKIE];
     const user = token ? await this.auth.getUserByToken(token) : null;
 
     if (!user) {
       this.realtime.send(socket, { type: 'error', message: 'unauthorized' });
       socket.close();
+      return;
+    }
+
+    // Персональный канал пользователя (для дашборда и т.п.)
+    this.realtime.joinUser(user.id, socket);
+    socket.on('close', () => {
+      this.realtime.leaveUser(user.id, socket);
+    });
+
+    if (!sessionId) {
+      this.realtime.send(socket, { type: 'ready' });
       return;
     }
 

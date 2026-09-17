@@ -34,22 +34,38 @@ model Message {
 }
 
 model ChatSession {
-  id        String       @id @default(cuid())
-  name      String
-  status    ReviewStatus @default(PENDING)
-  childId   String       @map("child_id")
-  parentId  String       @map("parent_id")
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  id         String       @id @default(cuid())
+  name       String
+  status     ReviewStatus @default(PENDING)
+  archivedAt DateTime?    @map("archived_at")
+  childId    String       @map("child_id")
+  parentId   String       @map("parent_id")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
 
   child    User       @relation("SessionChild", fields: [childId], references: [id], onDelete: Cascade)
   parent   User       @relation("SessionParent", fields: [parentId], references: [id], onDelete: Cascade)
   messages Message[]
   pages    RoomPage[]
+  reads    SessionRead[]
 
   @@index([childId])
   @@index([parentId])
   @@map("chat_sessions")
+}
+
+model SessionRead {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  sessionId         String   @map("session_id")
+  lastReadMessageId Int      @default(0) @map("last_read_message_id")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@map("session_reads")
 }
 
 model RoomPage {
@@ -101,6 +117,7 @@ model User {
   childSessions  ChatSession[] @relation("SessionChild")
   parentSessions ChatSession[] @relation("SessionParent")
   messages       Message[]     @relation("MessageSender")
+  sessionReads   SessionRead[]
 
   @@index([parentId])
   @@map("users")

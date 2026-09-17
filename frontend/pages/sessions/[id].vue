@@ -19,6 +19,12 @@
         >
           {{ statusLabel }}
         </span>
+        <span
+          v-if="session?.archivedAt"
+          class="shrink-0 rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-300"
+        >
+          Архив
+        </span>
       </div>
 
       <span class="w-10 shrink-0" />
@@ -53,6 +59,8 @@
           :current-page-id="currentPageId"
           :drawing-enabled="drawingEnabled"
           :can-review="user?.type === 'parent'"
+          :can-delete="user?.type === 'parent'"
+          :archived="!!session?.archivedAt"
           :backend-origin="backendOrigin"
           @pick-files="fileInput?.click()"
           @capture="cameraInput?.click()"
@@ -61,6 +69,8 @@
           @delete-page="deletePage"
           @toggle-chat="chatOpen = true"
           @review="reviewOpen = true"
+          @remove="deleteOpen = true"
+          @restore="doRestore"
         />
       </div>
 
@@ -139,6 +149,46 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="deleteOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      @click.self="deleteOpen = false"
+    >
+      <div class="w-full max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
+        <h3 class="text-lg font-semibold text-gray-100">
+          Удалить комнату
+        </h3>
+        <p class="mt-1 text-sm text-gray-400">
+          «Архивировать» — комнату можно будет восстановить. «Удалить навсегда» стирает комнату, сообщения, рисунки и файлы.
+        </p>
+        <div class="mt-5 flex flex-col gap-2">
+          <button
+            type="button"
+            class="w-full rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
+            :disabled="deleting"
+            @click="confirmArchive"
+          >
+            Архивировать
+          </button>
+          <button
+            type="button"
+            class="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-60"
+            :disabled="deleting"
+            @click="confirmRemove"
+          >
+            Удалить навсегда
+          </button>
+          <button
+            type="button"
+            class="mt-1 text-sm text-gray-400 transition-colors hover:text-gray-200"
+            @click="deleteOpen = false"
+          >
+            Отмена
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -166,6 +216,10 @@ const {
   addStroke,
   undoLastStroke,
   review,
+  archive,
+  restore,
+  remove,
+  markRead,
 } = useRoom(sessionId)
 
 await load()
@@ -191,6 +245,8 @@ const statusClass = computed(() =>
 
 const reviewOpen = ref(false)
 const reviewing = ref(false)
+const deleteOpen = ref(false)
+const deleting = ref(false)
 
 const submitReview = async (result: 'REVIEWED' | 'APPROVED') => {
   reviewing.value = true
@@ -203,7 +259,36 @@ const submitReview = async (result: 'REVIEWED' | 'APPROVED') => {
   }
 }
 
-onMounted(connect)
+const confirmArchive = async () => {
+  deleting.value = true
+
+  try {
+    await archive()
+    await navigateTo('/dashboard')
+  } finally {
+    deleting.value = false
+  }
+}
+
+const confirmRemove = async () => {
+  deleting.value = true
+
+  try {
+    await remove()
+    await navigateTo('/dashboard')
+  } finally {
+    deleting.value = false
+  }
+}
+
+const doRestore = async () => {
+  await restore()
+}
+
+onMounted(() => {
+  connect()
+  void markRead()
+})
 
 const selectColor = (color: string) => {
   drawColor.value = color

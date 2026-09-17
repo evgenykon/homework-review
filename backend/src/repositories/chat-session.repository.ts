@@ -19,15 +19,22 @@ export class ChatSessionRepository {
 
   findByChild(childId: string): Promise<ChatSession[]> {
     return this.prisma.chatSession.findMany({
-      where: { childId },
+      where: { childId, archivedAt: null },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   findByParent(parentId: string): Promise<ChatSession[]> {
     return this.prisma.chatSession.findMany({
-      where: { parentId },
+      where: { parentId, archivedAt: null },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findArchivedByParent(parentId: string): Promise<ChatSession[]> {
+    return this.prisma.chatSession.findMany({
+      where: { parentId, archivedAt: { not: null } },
+      orderBy: { archivedAt: 'desc' },
     });
   }
 
@@ -36,5 +43,23 @@ export class ChatSessionRepository {
       where: { id },
       data: { status },
     });
+  }
+
+  archive(id: string): Promise<ChatSession> {
+    return this.prisma.chatSession.update({
+      where: { id },
+      data: { archivedAt: new Date() },
+    });
+  }
+
+  restore(id: string): Promise<ChatSession> {
+    return this.prisma.chatSession.update({
+      where: { id },
+      data: { archivedAt: null },
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.chatSession.delete({ where: { id } });
   }
 }

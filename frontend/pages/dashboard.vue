@@ -31,9 +31,23 @@
         Комнаты
       </h2>
 
-      <p v-if="!rooms.length" class="text-sm text-gray-400">
-        Пока нет комнат.
-      </p>
+      <template v-if="!rooms.length">
+        <p class="text-sm text-gray-400">
+          Пока нет комнат.
+        </p>
+        <button
+          v-if="user?.type === 'parent'"
+          type="button"
+          class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
+          :disabled="!children.length"
+          @click="openCreateRoom"
+        >
+          Создать комнату
+        </button>
+        <p v-if="user?.type === 'parent' && !children.length" class="text-xs text-gray-500">
+          Сначала пригласите ребёнка.
+        </p>
+      </template>
 
       <ul v-else class="space-y-1">
         <li v-for="room in rooms" :key="room.id">
@@ -41,7 +55,15 @@
             :to="`/sessions/${room.id}`"
             class="flex items-center justify-between gap-3 rounded-md px-3 py-2 transition-colors hover:bg-white/5"
           >
-            <span class="truncate text-gray-100">{{ room.name }}</span>
+            <span class="flex min-w-0 items-center gap-2">
+              <span class="truncate text-gray-100">{{ room.name }}</span>
+              <span
+                v-if="room.unreadCount"
+                class="shrink-0 rounded-full bg-primary-600 px-2 py-0.5 text-xs font-medium text-white"
+              >
+                {{ room.unreadCount }}
+              </span>
+            </span>
             <span class="flex shrink-0 items-center gap-2">
               <span
                 v-if="room.status"
@@ -57,6 +79,18 @@
           </NuxtLink>
         </li>
       </ul>
+    </div>
+
+    <div v-if="user?.type === 'parent' && archivedRooms.length" class="app-card space-y-3">
+      <h2 class="text-lg font-semibold text-gray-100">
+        Архив
+      </h2>
+      <NuxtLink
+        to="/archive"
+        class="inline-block self-start rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/5"
+      >
+        Архив комнат ({{ archivedRooms.length }})
+      </NuxtLink>
     </div>
 
     <div v-if="user?.type === 'parent'" class="app-card space-y-3">
@@ -132,6 +166,55 @@
         {{ error }}
       </p>
     </div>
+
+    <div
+      v-if="createRoomOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      @click.self="createRoomOpen = false"
+    >
+      <div class="w-full max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
+        <h3 class="text-lg font-semibold text-gray-100">
+          Новая комната
+        </h3>
+        <form class="mt-4 space-y-4" @submit.prevent="submitCreateRoom">
+          <select
+            v-model="newRoomChildId"
+            required
+            class="w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
+          >
+            <option v-for="child in children" :key="child.id" :value="child.id">
+              {{ child.name }}
+            </option>
+          </select>
+          <input
+            v-model="newRoomName"
+            type="text"
+            required
+            placeholder="Название комнаты"
+            class="w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
+          >
+          <p v-if="createRoomError" class="text-sm text-red-400">
+            {{ createRoomError }}
+          </p>
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-md px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/5"
+              @click="createRoomOpen = false"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              :disabled="creatingRoom"
+              class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
+            >
+              {{ creatingRoom ? 'Создаём…' : 'Создать' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -149,6 +232,7 @@ type ChatSession = {
   id: string
   name: string
   status: ReviewStatus
+  unreadCount: number
   childId: string
   parentId: string
   createdAt: string
@@ -172,11 +256,53 @@ const { data: children } = await useFetch('/api/children', {
   transform: (data): Child[] => (Array.isArray(data) ? (data as Child[]) : []),
 })
 
-const { data: rooms } = await useFetch('/api/sessions', {
+const { data: rooms, refresh: refreshRooms } = await useFetch('/api/sessions', {
   headers: useRequestHeaders(['cookie']),
   ignoreResponseError: true,
   transform: (data): ChatSession[] => (Array.isArray(data) ? (data as ChatSession[]) : []),
 })
+
+const { data: archivedRooms, refresh: refreshArchived } = await useFetch('/api/sessions/archive', {
+  headers: useRequestHeaders(['cookie']),
+  ignoreResponseError: true,
+  transform: (data): ChatSession[] => (Array.isArray(data) ? (data as ChatSession[]) : []),
+})
+
+useSessionEvents(() => {
+  void refreshRooms()
+  void refreshArchived()
+})
+
+const createRoomOpen = ref(false)
+const newRoomChildId = ref('')
+const newRoomName = ref('')
+const creatingRoom = ref(false)
+const createRoomError = ref<string | null>(null)
+
+const openCreateRoom = () => {
+  newRoomChildId.value = children.value?.[0]?.id ?? ''
+  newRoomName.value = ''
+  createRoomError.value = null
+  createRoomOpen.value = true
+}
+
+const submitCreateRoom = async () => {
+  creatingRoom.value = true
+  createRoomError.value = null
+
+  try {
+    await $fetch(`/api/children/${newRoomChildId.value}/sessions`, {
+      method: 'POST',
+      body: { name: newRoomName.value },
+    })
+    createRoomOpen.value = false
+    await refreshRooms()
+  } catch {
+    createRoomError.value = 'Не удалось создать комнату'
+  } finally {
+    creatingRoom.value = false
+  }
+}
 
 const loading = ref(false)
 const error = ref<string | null>(null)

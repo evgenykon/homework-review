@@ -19,6 +19,7 @@ import { InviteRepository } from './repositories/invite.repository';
 import { MessageRepository } from './repositories/message.repository';
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { RoomPageRepository } from './repositories/room-page.repository';
+import { SessionReadRepository } from './repositories/session-read.repository';
 import { SessionRepository } from './repositories/session.repository';
 import { StrokeRepository } from './repositories/stroke.repository';
 import { UserRepository } from './repositories/user.repository';
@@ -37,6 +38,7 @@ import { HealthService } from './services/health.service';
 import { InviteService } from './services/invite.service';
 import { PageService } from './services/page.service';
 import { RealtimeService } from './services/realtime.service';
+import { StorageService } from './services/storage.service';
 import { YandexOAuthService } from './services/yandex-oauth.service';
 
 const config = loadConfig();
@@ -52,6 +54,7 @@ const realtime = new RealtimeService();
 const healthRepository = new HealthRepository(prisma);
 const messageRepository = new MessageRepository(prisma);
 const chatSessionRepository = new ChatSessionRepository(prisma);
+const sessionReadRepository = new SessionReadRepository(prisma);
 const roomPageRepository = new RoomPageRepository(prisma);
 const strokeRepository = new StrokeRepository(prisma);
 const userRepository = new UserRepository(prisma);
@@ -61,15 +64,23 @@ const inviteRepository = new InviteRepository(prisma);
 const yandexOAuthService = new YandexOAuthService(config.yandex);
 
 const healthService = new HealthService(healthRepository);
-const chatService = new ChatService(messageRepository, realtime);
+const chatService = new ChatService(
+  messageRepository,
+  chatSessionRepository,
+  sessionReadRepository,
+  realtime,
+);
+const storageService = new StorageService(config);
 const chatSessionService = new ChatSessionService(
   chatSessionRepository,
   userRepository,
+  roomPageRepository,
+  storageService,
   chatService,
   realtime,
 );
 const pageService = new PageService(
-  config,
+  storageService,
   roomPageRepository,
   strokeRepository,
   chatSessionService,

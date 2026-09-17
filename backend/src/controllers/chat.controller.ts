@@ -45,6 +45,69 @@ export class ChatController {
     reply.send(await this.sessions.listForUser(user));
   };
 
+  markRead = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const user = await this.requireUser(request);
+    const session = await this.sessions.findAccessible(request.params.id, user);
+
+    if (!session) {
+      throw request.server.httpErrors.notFound('Session not found');
+    }
+
+    await this.chat.markRead(user.id, session.id);
+    reply.send({ ok: true });
+  };
+
+  listArchived = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    const parent = await this.requireParent(request);
+    reply.send(await this.sessions.listArchivedForParent(parent.id));
+  };
+
+  archive = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const parent = await this.requireParent(request);
+    const session = await this.sessions.findAccessible(request.params.id, parent);
+
+    if (!session) {
+      throw request.server.httpErrors.notFound('Session not found');
+    }
+
+    reply.send(await this.sessions.archive(session));
+  };
+
+  restore = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const parent = await this.requireParent(request);
+    const session = await this.sessions.findAccessible(request.params.id, parent);
+
+    if (!session) {
+      throw request.server.httpErrors.notFound('Session not found');
+    }
+
+    reply.send(await this.sessions.restore(session));
+  };
+
+  remove = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const parent = await this.requireParent(request);
+    const session = await this.sessions.findAccessible(request.params.id, parent);
+
+    if (!session) {
+      throw request.server.httpErrors.notFound('Session not found');
+    }
+
+    await this.sessions.remove(session);
+    reply.send({ ok: true });
+  };
+
   getSession = async (
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,

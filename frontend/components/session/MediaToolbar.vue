@@ -58,13 +58,33 @@
 
       <div class="flex shrink-0 items-center gap-2">
         <button
-          v-if="canReview"
+          v-if="archived"
           type="button"
           class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-          @click="emit('review')"
+          @click="emit('restore')"
         >
-          Review
+          Восстановить
         </button>
+
+        <template v-else>
+          <button
+            v-if="canReview"
+            type="button"
+            class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+            @click="emit('review')"
+          >
+            Review
+          </button>
+
+          <button
+            v-if="canDelete"
+            type="button"
+            class="rounded-md border border-red-500/60 px-3 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
+            @click="emit('remove')"
+          >
+            Удалить
+          </button>
+        </template>
 
         <button
           type="button"
@@ -86,6 +106,8 @@ defineProps<{
   currentPageId: string | null
   drawingEnabled: boolean
   canReview: boolean
+  canDelete: boolean
+  archived: boolean
   backendOrigin: string
 }>()
 
@@ -97,5 +119,7 @@ const emit = defineEmits<{
   deletePage: [id: string]
   toggleChat: []
   review: []
+  remove: []
+  restore: []
 }>()
 </script>

@@ -98,7 +98,8 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/health` | Проверка сервера и БД |
 | `GET` | `/api/messages` | Последние сообщения |
 | `POST` | `/api/messages` | Создать сообщение `{ "body": "..." }` |
-| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add`, `stroke:remove`, `session:update` |
+| `WS` | `/ws?sessionId=<id>` | Чат и вайтборд комнаты: `message`, `page:add`, `page:remove`, `stroke:add`, `stroke:remove`, `session:update`, `session:deleted` |
+| `WS` | `/ws` | Персональный канал пользователя (дашборд, архив): `sessions:changed` при создании/изменении/удалении комнат |
 | `GET` | `/api/auth/yandex` | Начать OAuth-вход через Яндекс (`?role=parent\|child`, `?parentId=<id>`) |
 | `GET` | `/api/auth/yandex/callback` | Callback Яндекс OAuth (redirect-флоу) |
 | `POST` | `/api/auth/yandex/token` | Вход по токену из официальной кнопки Яндекс ID `{ "token": "..." }` |
@@ -109,10 +110,15 @@ make up                # собрать dev-образы и запустить �
 | `GET` | `/api/children/:id` | Ребёнок по id (только свой) |
 | `GET` | `/api/children/:id/sessions` | Комнаты чата ребёнка (только родитель) |
 | `POST` | `/api/children/:id/sessions` | Создать комнату `{ "name": "..." }` |
-| `GET` | `/api/sessions` | Комнаты текущего пользователя |
+| `GET` | `/api/sessions` | Комнаты текущего пользователя (с `unreadCount`) |
+| `POST` | `/api/sessions/:id/read` | Отметить комнату прочитанной |
 | `GET` | `/api/sessions/:id` | Комната по id |
 | `GET` | `/api/sessions/:id/messages` | Сообщения комнаты |
 | `POST` | `/api/sessions/:id/review` | Ревью комнаты (только родитель): `{ "result": "REVIEWED" \| "APPROVED" }` |
+| `GET` | `/api/sessions/archive` | Архивные комнаты родителя |
+| `POST` | `/api/sessions/:id/archive` | Архивировать комнату (только родитель) |
+| `POST` | `/api/sessions/:id/restore` | Восстановить комнату из архива |
+| `DELETE` | `/api/sessions/:id` | Удалить комнату навсегда (сообщения, рисунки, файлы) |
 | `POST` | `/api/sessions/:id/pages` | Загрузить изображение в комнату (multipart, поле `file`) |
 | `GET` | `/api/sessions/:id/pages` | Страницы комнаты с рисунками |
 | `DELETE` | `/api/pages/:pageId` | Удалить страницу (вместе с рисунками и файлом) |
@@ -169,6 +175,17 @@ Redirect-флоу (тоже поддерживается):
 - После ревью статус меняется, в чат пишется сообщение вида `<имя> закончил ревью, результат: <результат>`, а всем участникам уходит WS-событие `session:update`.
 - Когда ребёнок загружает новое изображение, статус сбрасывается на `PENDING`.
 - Текущий статус показывается бейджем в шапке комнаты.
+
+### Архив и удаление
+
+В комнате у родителя есть кнопка **Удалить** с модалкой:
+
+- **Архивировать** — `chat_sessions.archived_at` заполняется, комната пропадает из списков (дашборд, комнаты ребёнка), но появляется в архиве. На дашборде показывается карточка **«Архив комнат»** со ссылкой на `/archive`; там комнату можно открыть и восстановить (`POST /sessions/:id/restore`).
+- **Удалить навсегда** — `DELETE /sessions/:id`: удаляются комната, сообщения, страницы и штрихи (каскадом), а файлы изображений стираются с диска. Подключённым клиентам уходит WS-событие `session:deleted`.
+
+### Непрочитанные сообщения
+
+`GET /api/sessions` возвращает комнаты с полем `unreadCount` — количество сообщений не от текущего пользователя после последнего прочтения. При открытии комнаты фронт вызывает `POST /sessions/:id/read`; при новом сообщении участникам уходит WS `sessions:changed`, и дашборд обновляет счётчики. Прогресс чтения хранится в `session_reads` (`user_id`, `session_id`, `last_read_message_id`).
 
 ### Регистрация приложения в Яндексе
 

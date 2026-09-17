@@ -11,7 +11,12 @@ useHead({
   htmlAttrs: {
     class: computed(() => (darkMode.value ? 'dark' : '')),
   },
-  link: [{ rel: 'manifest', href: '/manifest.webmanifest' }],
+  link: [
+    { rel: 'manifest', href: '/manifest.webmanifest' },
+    { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+    { rel: 'icon', type: 'image/png', href: '/favicon-32.png', sizes: '32x32' },
+    { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+  ],
   meta: [{ name: 'theme-color', content: '#111827' }],
 })
 

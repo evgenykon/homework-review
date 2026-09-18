@@ -5,6 +5,7 @@
     :class="collapsed ? 'pointer-events-none bg-transparent' : 'bg-black/70'"
   >
     <div
+      ref="panelEl"
       class="pointer-events-auto flex w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-gray-800 shadow-xl"
       :class="collapsed ? 'h-auto' : 'h-full'"
       :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
@@ -62,8 +63,45 @@ const emit = defineEmits<{ close: [] }>()
 
 const collapsed = ref(false)
 const dragging = ref(false)
+const panelEl = ref<HTMLElement | null>(null)
 const position = reactive({ x: 0, y: 0 })
 let origin = { x: 0, y: 0, px: 0, py: 0 }
+let observer: ResizeObserver | null = null
+
+const MARGIN = 8
+
+const clamp = (value: number, min: number, max: number) =>
+  max >= min ? Math.min(Math.max(value, min), max) : min
+
+const clampPosition = () => {
+  const el = panelEl.value
+
+  if (!el || !import.meta.client) {
+    return
+  }
+
+  const rect = el.getBoundingClientRect()
+  const baseLeft = rect.left - position.x
+  const baseTop = rect.top - position.y
+  const baseRight = rect.right - position.x
+  const baseBottom = rect.bottom - position.y
+
+  position.x = clamp(position.x, MARGIN - baseLeft, window.innerWidth - MARGIN - baseRight)
+  position.y = clamp(position.y, MARGIN - baseTop, window.innerHeight - MARGIN - baseBottom)
+}
+
+// Пересчёт после изменения layout (сворачивание/разворачивание): два rAF,
+// чтобы размеры панели гарантированно были пересчитаны до измерения.
+const clampAfterLayout = () => {
+  if (!import.meta.client) {
+    return
+  }
+
+  requestAnimationFrame(() => {
+    clampPosition()
+    requestAnimationFrame(clampPosition)
+  })
+}
 
 const fileUrl = computed(() =>
   props.book ? `${props.backendOrigin}/api/books/${props.book.id}/file` : '',
@@ -80,6 +118,26 @@ watch(
   },
 )
 
+watch(collapsed, (value) => {
+  if (!value) {
+    // при разворачивании панель занимает всю высоту — сбрасываем вертикальный сдвиг,
+    // иначе шапка может уехать за верх окна
+    position.y = 0
+  }
+
+  clampAfterLayout()
+})
+
+watch(panelEl, (el, _previous, onCleanup) => {
+  if (!el || typeof ResizeObserver === 'undefined') {
+    return
+  }
+
+  observer = new ResizeObserver(() => clampPosition())
+  observer.observe(el)
+  onCleanup(() => observer?.disconnect())
+})
+
 const onPointerDown = (event: PointerEvent) => {
   dragging.value = true
   origin = { x: event.clientX, y: event.clientY, px: position.x, py: position.y }
@@ -93,9 +151,20 @@ const onPointerMove = (event: PointerEvent) => {
 
   position.x = origin.px + (event.clientX - origin.x)
   position.y = origin.py + (event.clientY - origin.y)
+  clampPosition()
 }
 
 const onPointerUp = () => {
   dragging.value = false
 }
+
+onMounted(() => {
+  window.addEventListener('resize', clampPosition)
+  clampAfterLayout()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', clampPosition)
+  observer?.disconnect()
+})
 </script>

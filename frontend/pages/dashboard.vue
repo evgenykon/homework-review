@@ -129,41 +129,37 @@
       </h2>
 
       <p v-if="!children.length" class="text-sm text-gray-400">
-        Пока нет детей. Пригласите ребёнка по ссылке ниже.
+        Пока нет детей.
       </p>
 
       <ul v-else class="space-y-1">
-        <li v-for="child in children" :key="child.id">
-          <NuxtLink
-            :to="`/children/${child.id}`"
-            class="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-white/5"
+        <li
+          v-for="child in children"
+          :key="child.id"
+          class="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-white/5"
+        >
+          <img
+            v-if="child.photoUrl"
+            :src="child.photoUrl"
+            :alt="child.name"
+            class="h-10 w-10 rounded-full object-cover"
           >
-            <img
-              v-if="child.photoUrl"
-              :src="child.photoUrl"
-              :alt="child.name"
-              class="h-10 w-10 rounded-full object-cover"
-            >
-            <div>
-              <p class="text-gray-100">{{ child.name }}</p>
-              <p v-if="child.age !== null" class="text-xs text-gray-400">
-                {{ child.age }} лет
-              </p>
-            </div>
+          <NuxtLink :to="`/children/${child.id}`" class="min-w-0 flex-1">
+            <p class="truncate text-gray-100">{{ child.name }}</p>
+            <p v-if="child.age !== null" class="text-xs text-gray-400">
+              {{ child.age }} лет
+            </p>
           </NuxtLink>
+          <button
+            type="button"
+            class="shrink-0 text-sm text-red-300 transition-colors hover:text-red-200 disabled:opacity-60"
+            :disabled="unlinkingId === child.id"
+            @click="unlinkChild(child.id)"
+          >
+            Отвязать
+          </button>
         </li>
       </ul>
-    </div>
-
-    <div v-if="user?.type === 'parent'" class="app-card space-y-4">
-      <div>
-        <h2 class="text-lg font-semibold text-gray-100">
-          Пригласить ребёнка
-        </h2>
-        <p class="mt-1 text-sm text-gray-400">
-          Сгенерируйте ссылку и отправьте её ребёнку.
-        </p>
-      </div>
 
       <button
         type="button"
@@ -171,7 +167,7 @@
         :disabled="loading"
         @click="createInvite"
       >
-        {{ loading ? 'Генерируем…' : 'Сгенерировать инвайт' }}
+        {{ loading ? 'Генерируем…' : '+ Добавить ребёнка' }}
       </button>
 
       <div v-if="invite" class="space-y-2">
@@ -319,7 +315,7 @@ const {
 
 const { toasts } = useToasts()
 
-const { data: children } = await useFetch('/api/children', {
+const { data: children, refresh: refreshChildren } = await useFetch('/api/children', {
   headers: useRequestHeaders(['cookie']),
   ignoreResponseError: true,
   transform: (data): Child[] => (Array.isArray(data) ? (data as Child[]) : []),
@@ -355,6 +351,7 @@ useSessionEvents((type) => {
 })
 
 const createRoomOpen = ref(false)
+const unlinkingId = ref<string | null>(null)
 const newRoomChildId = ref('')
 const newRoomName = ref('')
 const creatingRoom = ref(false)
@@ -389,6 +386,17 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const invite = ref<Invite | null>(null)
 const copied = ref(false)
+
+const unlinkChild = async (id: string) => {
+  unlinkingId.value = id
+
+  try {
+    await $fetch(`/api/children/${id}`, { method: 'DELETE' })
+    await refreshChildren()
+  } finally {
+    unlinkingId.value = null
+  }
+}
 
 const createInvite = async () => {
   loading.value = true

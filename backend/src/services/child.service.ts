@@ -11,4 +11,8 @@ export class ChildService {
   findForParent(parentId: string, childId: string): Promise<User | null> {
     return this.users.findChild(parentId, childId);
   }
+
+  unlinkForParent(parentId: string, childId: string): Promise<boolean> {
+    return this.users.unlinkChild(parentId, childId);
+  }
 }

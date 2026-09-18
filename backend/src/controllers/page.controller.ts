@@ -120,7 +120,10 @@ export class PageController {
       throw request.server.httpErrors.notFound('Image not found');
     }
 
-    reply.type(page.mimeType).send(image);
+    reply
+      .type(page.mimeType)
+      .header('cache-control', 'private, max-age=31536000, immutable')
+      .send(image);
   };
 
   private async requireUser(request: FastifyRequest): Promise<User> {

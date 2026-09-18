@@ -29,6 +29,20 @@ export class ChildController {
     reply.send(child);
   };
 
+  remove = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const parent = await this.requireParent(request);
+    const removed = await this.children.unlinkForParent(parent.id, request.params.id);
+
+    if (!removed) {
+      throw request.server.httpErrors.notFound('Child not found');
+    }
+
+    reply.send({ ok: true });
+  };
+
   private async requireParent(request: FastifyRequest): Promise<User> {
     const user = await getSessionUser(request, this.auth);
 

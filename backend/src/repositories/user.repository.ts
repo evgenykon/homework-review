@@ -37,6 +37,15 @@ export class UserRepository {
     });
   }
 
+  async unlinkChild(parentId: string, childId: string): Promise<boolean> {
+    const result = await this.prisma.user.updateMany({
+      where: { id: childId, parentId, type: 'child' },
+      data: { parentId: null },
+    });
+
+    return result.count > 0;
+  }
+
   create(data: CreateUserData): Promise<User> {
     return this.prisma.user.create({ data });
   }

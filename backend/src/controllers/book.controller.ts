@@ -81,6 +81,7 @@ export class BookController {
 
     reply
       .type(book.mimeType || 'application/pdf')
+      .header('cache-control', 'private, max-age=31536000, immutable')
       .header('content-disposition', `inline; filename*=UTF-8''${encodeURIComponent(book.title)}`)
       .send(data);
   };

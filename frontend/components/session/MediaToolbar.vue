@@ -28,11 +28,30 @@
         >
           Рисовать
         </button>
+        <button
+          type="button"
+          class="shrink-0 rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5"
+          @click="emit('toggleCalculator')"
+        >
+          Калькулятор
+        </button>
 
-        <div v-if="pages.length" class="mx-1 h-8 w-px shrink-0 bg-gray-700" />
+        <div
+          v-if="visiblePages.length || hiddenPages.length"
+          class="mx-1 h-8 w-px shrink-0 bg-gray-700"
+        />
 
-        <div class="flex shrink-0 items-center gap-2">
-          <div v-for="(page, index) in pages" :key="page.id" class="group relative">
+        <button
+          v-if="hiddenPages.length && !photosOpen"
+          type="button"
+          class="shrink-0 rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5"
+          @click="photosOpen = true"
+        >
+          Архив ({{ hiddenPages.length }})
+        </button>
+
+        <div v-if="visiblePages.length" class="flex shrink-0 items-center gap-2">
+          <div v-for="page in visiblePages" :key="page.id" class="group relative">
             <button
               type="button"
               class="block h-12 w-12 overflow-hidden rounded-md border-2"
@@ -40,11 +59,17 @@
               @click="emit('selectPage', page.id)"
             >
               <img
-                :src="`${backendOrigin}/api/pages/${page.id}/image`"
-                :alt="`Страница ${index + 1}`"
+                :src="`${backendOrigin}/media/${page.fileName}`"
+                :alt="`Страница ${page.position + 1}`"
+                loading="lazy"
+                decoding="async"
                 class="h-full w-full object-cover"
               >
             </button>
+            <div
+              class="photo-fresh pointer-events-none absolute inset-0 rounded-md"
+              :class="isPageFresh(page) ? 'opacity-100' : 'opacity-0'"
+            />
             <button
               type="button"
               class="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white group-hover:flex"
@@ -101,13 +126,15 @@
 <script setup lang="ts">
 import type { RoomPage } from '~/composables/useRoom'
 
-defineProps<{
+const props = defineProps<{
   pages: RoomPage[]
   currentPageId: string | null
   drawingEnabled: boolean
   canReview: boolean
   canDelete: boolean
   archived: boolean
+  archiveCutoff: string | null
+  isPageFresh: (page: RoomPage) => boolean
   backendOrigin: string
 }>()
 
@@ -115,6 +142,7 @@ const emit = defineEmits<{
   pickFiles: []
   capture: []
   toggleDrawing: []
+  toggleCalculator: []
   selectPage: [id: string]
   deletePage: [id: string]
   toggleChat: []
@@ -122,4 +150,31 @@ const emit = defineEmits<{
   remove: []
   restore: []
 }>()
+
+const photosOpen = ref(false)
+
+watch(
+  () => props.archiveCutoff,
+  () => {
+    photosOpen.value = false
+  },
+)
+
+const hiddenPages = computed(() => {
+  const cutoff = props.archiveCutoff
+
+  return cutoff
+    ? props.pages.filter((page) => new Date(page.createdAt) <= new Date(cutoff))
+    : []
+})
+
+const visiblePages = computed(() => {
+  const cutoff = props.archiveCutoff
+
+  if (!cutoff || photosOpen.value) {
+    return props.pages
+  }
+
+  return props.pages.filter((page) => new Date(page.createdAt) > new Date(cutoff))
+})
 </script>

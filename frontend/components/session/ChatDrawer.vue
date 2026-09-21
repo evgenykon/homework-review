@@ -21,6 +21,7 @@
           :messages="messages"
           :connected="connected"
           :current-user-id="currentUserId"
+          :archive-cutoff="archiveCutoff"
           @send="emit('send', $event)"
         />
       </div>
@@ -36,6 +37,7 @@ defineProps<{
   messages: ChatMessage[]
   connected: boolean
   currentUserId?: string
+  archiveCutoff?: string | null
 }>()
 
 const emit = defineEmits<{

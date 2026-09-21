@@ -1,11 +1,20 @@
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <div ref="scrollEl" class="flex-1 space-y-2 overflow-y-auto p-3">
-      <p v-if="!messages.length" class="text-sm text-gray-400">
+      <p v-if="!visibleMessages.length && !hiddenCount" class="text-sm text-gray-400">
         Сообщений пока нет.
       </p>
 
-      <template v-for="(message, index) in messages" :key="message.id">
+      <button
+        v-if="hiddenCount && !archiveOpen"
+        type="button"
+        class="mx-auto block rounded-md border border-gray-600 px-3 py-1 text-xs text-gray-300 transition-colors hover:bg-white/5"
+        @click="expandArchive"
+      >
+        Архив ({{ hiddenCount }})
+      </button>
+
+      <template v-for="(message, index) in visibleMessages" :key="message.id">
         <p
           v-if="startsNewDay(index)"
           class="py-1 text-center text-xs font-medium text-gray-500"
@@ -71,19 +80,55 @@ const props = defineProps<{
   messages: ChatMessage[]
   connected: boolean
   currentUserId?: string
+  archiveCutoff?: string | null
 }>()
 
 const emit = defineEmits<{ send: [body: string] }>()
 
 const draft = ref('')
 const scrollEl = ref<HTMLElement | null>(null)
+const archiveOpen = ref(false)
+
+const visibleMessages = computed(() => {
+  const cutoff = props.archiveCutoff
+
+  if (!cutoff || archiveOpen.value) {
+    return props.messages
+  }
+
+  return props.messages.filter((message) => new Date(message.createdAt) > new Date(cutoff))
+})
+
+const hiddenCount = computed(() => props.messages.length - visibleMessages.value.length)
+
+watch(
+  () => props.archiveCutoff,
+  () => {
+    archiveOpen.value = false
+  },
+)
+
+const expandArchive = async () => {
+  const el = scrollEl.value
+  const distanceFromBottom = el ? el.scrollHeight - el.scrollTop : 0
+
+  archiveOpen.value = true
+  await nextTick()
+
+  if (el) {
+    el.scrollTop = el.scrollHeight - distanceFromBottom
+  }
+}
 
 const startsNewDay = (index: number) => {
   if (index === 0) {
     return true
   }
 
-  return dayKey(props.messages[index].createdAt) !== dayKey(props.messages[index - 1].createdAt)
+  return (
+    dayKey(visibleMessages.value[index].createdAt) !==
+    dayKey(visibleMessages.value[index - 1].createdAt)
+  )
 }
 
 const submit = () => {

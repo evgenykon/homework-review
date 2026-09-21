@@ -61,10 +61,13 @@
           :can-review="user?.type === 'parent'"
           :can-delete="user?.type === 'parent'"
           :archived="!!session?.archivedAt"
+          :archive-cutoff="archiveCutoff"
+          :is-page-fresh="isPageFresh"
           :backend-origin="backendOrigin"
           @pick-files="fileInput?.click()"
           @capture="cameraInput?.click()"
           @toggle-drawing="drawingEnabled = !drawingEnabled"
+          @toggle-calculator="calculatorOpen = true"
           @select-page="selectPage"
           @delete-page="deletePage"
           @toggle-chat="chatOpen = true"
@@ -86,6 +89,7 @@
             :messages="messages"
             :connected="connected"
             :current-user-id="user?.id"
+            :archive-cutoff="archiveCutoff"
             @send="sendMessage"
           />
         </div>
@@ -114,6 +118,7 @@
       :messages="messages"
       :connected="connected"
       :current-user-id="user?.id"
+      :archive-cutoff="archiveCutoff"
       @close="chatOpen = false"
       @send="sendMessage"
     >
@@ -130,6 +135,8 @@
       :backend-origin="backendOrigin"
       @close="viewerBook = null"
     />
+
+    <CalculatorModal v-if="calculatorOpen" @close="calculatorOpen = false" />
 
     <div
       v-if="reviewOpen"
@@ -244,6 +251,8 @@ const {
   remove,
   markRead,
   refreshBooks,
+  isPageFresh,
+  markPageSeen,
 } = useRoom(sessionId)
 
 await load()
@@ -255,9 +264,16 @@ const drawingEnabled = ref(false)
 const drawColor = ref('#000000')
 const drawMode = ref<'draw' | 'erase'>('draw')
 const chatOpen = ref(false)
+const calculatorOpen = ref(false)
 const viewerBook = ref<Book | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
+
+// После одобрения старые сообщения и фото прячутся за «Архив»:
+// момент одобрения — это updatedAt сессии.
+const archiveCutoff = computed(() =>
+  session.value?.status === 'APPROVED' ? session.value.updatedAt : null,
+)
 
 const canUndo = computed(() => (currentPage.value?.strokes.length ?? 0) > 0)
 
@@ -348,6 +364,7 @@ const onStroke = async (data: StrokeData) => {
 
 const selectPage = (id: string) => {
   currentPageId.value = id
+  markPageSeen(id)
 }
 
 useHead({ title: computed(() => session.value?.name ?? 'Комната') })

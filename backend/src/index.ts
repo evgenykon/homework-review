@@ -1,8 +1,10 @@
+import { mkdir } from 'node:fs/promises';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import sensible from '@fastify/sensible';
+import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
 import { loadConfig } from './config/env';
 import { prisma } from './config/prisma';
@@ -57,6 +59,15 @@ await server.register(sensible);
 await server.register(cookie);
 await server.register(websocket);
 await server.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
+
+// В проде файлы отдаёт Caddy напрямую из /media/*, здесь — фолбэк для dev.
+await mkdir(config.uploadDir, { recursive: true });
+await server.register(fastifyStatic, {
+  root: config.uploadDir,
+  prefix: '/media/',
+  maxAge: '365d',
+  immutable: true,
+});
 
 const realtime = new RealtimeService();
 const healthRepository = new HealthRepository(prisma);

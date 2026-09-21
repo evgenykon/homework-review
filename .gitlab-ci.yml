@@ -23,7 +23,7 @@ deploy:production:
       rsync -az --delete
       --exclude '.env'
       --exclude 'uploads'
-      docker-compose.yml docker-compose.prod.yml
+      docker-compose.yml docker-compose.prod.yml Caddyfile
       "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
     - |
       if [ -n "$ENV_FILE" ]; then

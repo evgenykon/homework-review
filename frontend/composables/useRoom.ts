@@ -33,6 +33,7 @@ export type RoomPage = {
   id: string
   sessionId: string
   position: number
+  fileName: string
   mimeType: string
   createdAt: string
   strokes: Stroke[]
@@ -48,6 +49,7 @@ export type RoomSession = {
   childId: string
   parentId: string
   createdAt: string
+  updatedAt: string
 }
 
 type RoomEvent = {
@@ -84,6 +86,57 @@ export function useRoom(sessionId: string) {
 
   const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 
+  const seenStorageKey = computed(() =>
+    user.value ? `room-seen-pages:${user.value.id}:${sessionId}` : null,
+  )
+
+  const seenPageIds = ref<Set<string>>(new Set())
+
+  const readSeenPageIds = (): Set<string> | null => {
+    if (!import.meta.client || !seenStorageKey.value) {
+      return null
+    }
+
+    try {
+      const raw = localStorage.getItem(seenStorageKey.value)
+      return raw ? new Set(JSON.parse(raw) as string[]) : null
+    } catch {
+      return null
+    }
+  }
+
+  const persistSeenPageIds = () => {
+    if (!import.meta.client || !seenStorageKey.value) {
+      return
+    }
+
+    try {
+      localStorage.setItem(seenStorageKey.value, JSON.stringify([...seenPageIds.value]))
+    } catch {
+      // localStorage недоступен — подсветка не сохранится между визитами
+    }
+  }
+
+  // Первый визит: считаем все уже загруженные фото просмотренными,
+  // чтобы подсвечивались только действительно новые.
+  const initSeenPageIds = (knownPages: RoomPage[]) => {
+    const stored = readSeenPageIds()
+
+    seenPageIds.value = stored ?? new Set(knownPages.map((page) => page.id))
+    persistSeenPageIds()
+  }
+
+  const markPageSeen = (pageId: string) => {
+    if (seenPageIds.value.has(pageId)) {
+      return
+    }
+
+    seenPageIds.value = new Set(seenPageIds.value).add(pageId)
+    persistSeenPageIds()
+  }
+
+  const isPageFresh = (page: RoomPage) => !seenPageIds.value.has(page.id)
+
   const refreshPages = async () => {
     const data = await $fetch<RoomPage[]>(`/api/sessions/${sessionId}/pages`, {
       headers: requestHeaders,
@@ -91,6 +144,7 @@ export function useRoom(sessionId: string) {
     })
 
     pages.value = Array.isArray(data) ? data : []
+    initSeenPageIds(pages.value)
     currentPageId.value = pages.value.at(-1)?.id ?? null
   }
 
@@ -130,6 +184,7 @@ export function useRoom(sessionId: string) {
     messages.value = Array.isArray(messagesData) ? messagesData : []
     pages.value = Array.isArray(pagesData) ? pagesData : []
     books.value = Array.isArray(booksData) ? booksData : []
+    initSeenPageIds(pages.value)
     currentPageId.value = pages.value.at(-1)?.id ?? null
   }
 
@@ -197,10 +252,14 @@ export function useRoom(sessionId: string) {
       const form = new FormData()
       form.append('file', file)
 
-      await $fetch<RoomPage>(`/api/sessions/${sessionId}/pages`, {
+      const page = await $fetch<RoomPage>(`/api/sessions/${sessionId}/pages`, {
         method: 'POST',
         body: form,
       })
+
+      if (page?.id) {
+        markPageSeen(page.id)
+      }
     }
 
     if (!connected.value) {
@@ -267,8 +326,6 @@ export function useRoom(sessionId: string) {
     await $fetch(`/api/sessions/${sessionId}/read`, { method: 'POST' })
   }
 
-  const imageUrl = (pageId: string) => `${config.public.backendOrigin}/api/pages/${pageId}/image`
-
   onBeforeUnmount(() => {
     socket?.close()
   })
@@ -295,6 +352,7 @@ export function useRoom(sessionId: string) {
     remove,
     markRead,
     refreshBooks,
-    imageUrl,
+    isPageFresh,
+    markPageSeen,
   }
 }

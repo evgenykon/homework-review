@@ -117,7 +117,7 @@ const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value))
 
 const imageUrl = computed(() =>
-  props.currentPage ? `${props.backendOrigin}/api/pages/${props.currentPage.id}/image` : '',
+  props.currentPage ? `${props.backendOrigin}/media/${props.currentPage.fileName}` : '',
 )
 
 const imageReady = computed(() => naturalSize.width > 0 && naturalSize.height > 0)

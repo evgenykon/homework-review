@@ -69,7 +69,7 @@
 
     <div
       v-if="addOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/5 px-4"
       @click.self="closeAdd"
     >
       <div class="w-full max-w-md rounded-lg bg-gray-800 p-6 shadow-xl">

@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 z-40 flex flex-col justify-end bg-black/60"
+    class="fixed inset-0 z-40 flex flex-col justify-end bg-black/5"
     @click.self="emit('close')"
   >
     <div class="flex h-[75vh] flex-col rounded-t-2xl bg-gray-900">

@@ -218,7 +218,25 @@ export function useRoom(sessionId: string) {
         }
       } else if (payload.type === 'stroke:add' && payload.stroke) {
         const page = pages.value.find((item) => item.id === payload.stroke?.pageId)
-        page?.strokes.push(payload.stroke)
+        if (!page) {
+          return
+        }
+
+        if (page.strokes.some((stroke) => stroke.id === payload.stroke!.id)) {
+          return
+        }
+
+        // Если такой штрих уже нарисован локально (оптимистично) — заменяем временный
+        const optimisticIndex = page.strokes.findIndex(
+          (stroke) =>
+            stroke.id.startsWith('temp-') && sameStroke(stroke.data, payload.stroke!.data),
+        )
+
+        if (optimisticIndex !== -1) {
+          page.strokes[optimisticIndex] = payload.stroke
+        } else {
+          page.strokes.push(payload.stroke)
+        }
       } else if (payload.type === 'stroke:remove' && payload.strokeId) {
         for (const page of pages.value) {
           page.strokes = page.strokes.filter((stroke) => stroke.id !== payload.strokeId)
@@ -276,18 +294,66 @@ export function useRoom(sessionId: string) {
     }
   }
 
+  // Оптимистичное добавление штриха: линия появляется сразу, POST уходит фоном.
+  // Сервер рассылает stroke:add обратно — сверяемся и убираем дубликат.
   const addStroke = async (pageId: string, data: StrokeData) => {
-    await $fetch(`/api/pages/${pageId}/strokes`, {
-      method: 'POST',
-      body: { data },
+    const page = pages.value.find((item) => item.id === pageId)
+
+    if (!page) {
+      return
+    }
+
+    const tempId = `temp-${crypto.randomUUID()}`
+    page.strokes.push({
+      id: tempId,
+      pageId,
+      data,
+      createdAt: new Date().toISOString(),
     })
+
+    try {
+      const created = await $fetch<Stroke>(`/api/pages/${pageId}/strokes`, {
+        method: 'POST',
+        body: { data },
+      })
+
+      if (created?.id) {
+        const index = page.strokes.findIndex((stroke) => stroke.id === tempId)
+        if (index !== -1) {
+          page.strokes[index] = created
+        }
+      }
+    } catch {
+      // Не удалось сохранить — убираем временный штрих
+      const index = page.strokes.findIndex((stroke) => stroke.id === tempId)
+      if (index !== -1) {
+        page.strokes.splice(index, 1)
+      }
+    }
   }
+
+  const sameStroke = (a: StrokeData, b: StrokeData): boolean =>
+    a.color === b.color &&
+    a.width === b.width &&
+    (a.mode ?? 'draw') === (b.mode ?? 'draw') &&
+    a.points.length === b.points.length &&
+    a.points.every(
+      (point, index) => point.x === b.points[index]?.x && point.y === b.points[index]?.y,
+    )
 
   const undoLastStroke = async (pageId: string) => {
     const page = pages.value.find((item) => item.id === pageId)
     const last = page?.strokes.at(-1)
 
     if (!last) {
+      return
+    }
+
+    if (last.id.startsWith('temp-')) {
+      // Штрих ещё не сохранён на сервере — просто убираем локально
+      if (page) {
+        page.strokes = page.strokes.filter((stroke) => stroke.id !== last.id)
+      }
       return
     }
 

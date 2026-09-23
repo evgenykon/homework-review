@@ -41,7 +41,7 @@ export class ChatSessionRepository {
   updateStatus(id: string, status: ReviewStatus): Promise<ChatSession> {
     return this.prisma.chatSession.update({
       where: { id },
-      data: { status },
+      data: { status, approvedAt: status === 'APPROVED' ? new Date() : undefined },
     });
   }
 

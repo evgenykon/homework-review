@@ -1,39 +1,50 @@
 <template>
   <div class="shrink-0 border-t border-gray-800 bg-gray-900">
-    <div class="flex items-center gap-2 px-3 py-2">
-      <div class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+    <div class="flex items-center gap-1.5 px-3 py-2">
+      <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
         <button
           type="button"
-          class="shrink-0 rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5"
+          class="icon-btn"
+          title="Загрузить файл"
           @click="emit('pickFiles')"
         >
-          Файл
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M12 16V4m0 0l-4 4m4-4l4 4" />
+            <path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
+          </svg>
         </button>
         <button
           type="button"
-          class="shrink-0 rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5"
+          class="icon-btn"
+          title="Сделать снимок"
           @click="emit('capture')"
         >
-          Снимок
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M4 7h3l2-3h6l2 3h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
         </button>
         <button
           type="button"
-          class="shrink-0 rounded-md border px-3 py-1.5 text-sm transition-colors"
-          :class="
-            drawingEnabled
-              ? 'border-primary-500 bg-primary-600 text-white'
-              : 'border-gray-600 text-gray-200 hover:bg-white/5'
-          "
+          class="icon-btn"
+          :class="drawingEnabled ? 'is-active' : ''"
+          title="Рисовать"
           @click="emit('toggleDrawing')"
         >
-          Рисовать
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
+          </svg>
         </button>
         <button
           type="button"
-          class="shrink-0 rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5"
+          class="icon-btn"
+          title="Калькулятор"
           @click="emit('toggleCalculator')"
         >
-          Калькулятор
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <rect x="5" y="3" width="14" height="18" rx="2" />
+            <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
+          </svg>
         </button>
 
         <div
@@ -44,10 +55,18 @@
         <button
           v-if="hiddenPages.length && !photosOpen"
           type="button"
-          class="shrink-0 rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5"
+          class="icon-btn relative"
+          title="Архив"
           @click="photosOpen = true"
         >
-          Архив ({{ hiddenPages.length }})
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <rect x="3" y="4" width="18" height="4" rx="1" />
+            <path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8" />
+            <path d="M10 12h4" />
+          </svg>
+          <span class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-medium leading-none text-white">
+            {{ hiddenPages.length }}
+          </span>
         </button>
 
         <div v-if="visiblePages.length" class="flex shrink-0 items-center gap-2">
@@ -81,42 +100,57 @@
         </div>
       </div>
 
-      <div class="flex shrink-0 items-center gap-2">
+      <div class="flex shrink-0 items-center gap-1.5">
         <button
           v-if="archived"
           type="button"
-          class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+          class="icon-btn is-active"
+          title="Восстановить"
           @click="emit('restore')"
         >
-          Восстановить
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
         </button>
 
         <template v-else>
           <button
             v-if="canReview"
             type="button"
-            class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+            class="icon-btn is-active"
+            title="Ревью"
             @click="emit('review')"
           >
-            Review
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+            </svg>
           </button>
 
           <button
             v-if="canDelete"
             type="button"
-            class="rounded-md border border-red-500/60 px-3 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
+            class="icon-btn danger"
+            title="Удалить"
             @click="emit('remove')"
           >
-            Удалить
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
           </button>
         </template>
 
         <button
           type="button"
-          class="rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-white/5 lg:hidden"
+          class="icon-btn lg:hidden"
+          title="Чат"
           @click="emit('toggleChat')"
         >
-          Чат
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z" />
+          </svg>
         </button>
       </div>
     </div>

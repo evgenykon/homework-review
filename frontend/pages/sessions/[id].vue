@@ -269,11 +269,11 @@ const viewerBook = ref<Book | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
 
-// После одобрения старые сообщения и фото прячутся за «Архив»:
-// момент одобрения — это updatedAt сессии.
-const archiveCutoff = computed(() =>
-  session.value?.status === 'APPROVED' ? session.value.updatedAt : null,
-)
+// После одобрения старые сообщения и фото прячутся за «Архив».
+// Момент одобрения — approvedAt, который сохраняется и после того,
+// как ребёнок пришлёт новые фото (статус вернётся в PENDING),
+// поэтому архив остаётся архивом.
+const archiveCutoff = computed(() => session.value?.approvedAt ?? null)
 
 const canUndo = computed(() => (currentPage.value?.strokes.length ?? 0) > 0)
 

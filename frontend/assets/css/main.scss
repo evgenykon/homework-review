@@ -43,3 +43,35 @@ body {
   animation: fresh-photo-glow 1.8s ease-in-out infinite;
   transition: opacity 400ms ease;
 }
+
+.icon-btn {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius;
+  border: 1px solid #4b5563;
+  color: #d1d5db;
+  transition: background-color $transition, border-color $transition, color $transition;
+
+  &:hover {
+    background-color: rgb(255 255 255 / 0.05);
+  }
+
+  &.is-active {
+    border-color: #2563eb;
+    background-color: #2563eb;
+    color: #fff;
+  }
+
+  &.danger {
+    border-color: rgb(239 68 68 / 0.6);
+    color: #fca5a5;
+
+    &:hover {
+      background-color: rgb(239 68 68 / 0.1);
+    }
+  }
+}

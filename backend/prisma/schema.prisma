@@ -37,6 +37,7 @@ model ChatSession {
   id         String       @id @default(cuid())
   name       String
   status     ReviewStatus @default(PENDING)
+  approvedAt DateTime?    @map("approved_at")
   archivedAt DateTime?    @map("archived_at")
   childId    String       @map("child_id")
   parentId   String       @map("parent_id")

@@ -45,6 +45,7 @@ export type RoomSession = {
   id: string
   name: string
   status: ReviewStatus
+  approvedAt: string | null
   archivedAt: string | null
   childId: string
   parentId: string

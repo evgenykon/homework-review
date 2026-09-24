@@ -89,6 +89,13 @@ export class GameRepository {
     });
   }
 
+  async updateLastTaskType(gameId: string, taskType: number): Promise<void> {
+    await this.prisma.game.update({
+      where: { id: gameId },
+      data: { lastTaskType: taskType },
+    });
+  }
+
   async saveAnswers(attemptId: string, answers: { wordId: string; value: string }[]): Promise<void> {
     await this.prisma.gameAnswer.deleteMany({ where: { attemptId } });
 

@@ -6,6 +6,7 @@ import type {
   WordInput,
 } from '../repositories/game.repository';
 import type { ChatService } from './chat.service';
+import type { ChatSessionService } from './chat-session.service';
 import type { RealtimeService } from './realtime.service';
 
 export type GameMeta = {
@@ -67,6 +68,7 @@ export class GameService {
     private readonly games: GameRepository,
     private readonly realtime: RealtimeService,
     private readonly chat: ChatService,
+    private readonly sessions: ChatSessionService,
   ) {}
 
   byId(id: string): Promise<GameWithWords | null> {
@@ -125,7 +127,7 @@ export class GameService {
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
   }
 
-  async startAttempt(game: GameWithWords): Promise<GameTask | null> {
+  async startAttempt(game: GameWithWords, user: User): Promise<GameTask | null> {
     const latest = await this.games.findLatestAttempt(game.id);
 
     if (latest && latest.status !== 'CHECKED') {
@@ -136,8 +138,10 @@ export class GameService {
       return null;
     }
 
-    const taskType = Math.floor(Math.random() * 5) + 1;
+    const taskType = this.pickTaskType(game.lastTaskType);
     const attempt = await this.games.createAttempt(game.id, taskType);
+    await this.games.updateLastTaskType(game.id, taskType);
+    await this.chat.createMessage(game.sessionId, user.id, `Ребёнок начал игру «${game.name}»`, true);
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
 
     return this.buildTask(game, attempt);
@@ -173,10 +177,12 @@ export class GameService {
     await this.games.markAnswersCorrect(attempt.id, results);
     await this.games.setAttemptStatus(attempt.id, 'CHECKED');
 
+    const correct = results.filter((result) => result.correct).length;
+    await this.sessions.setStatus(game.sessionId, 'APPROVED');
     await this.chat.createMessage(
       game.sessionId,
       user.id,
-      `Ответ в игре «${game.name}» отправлен на проверку`,
+      `Ребёнок отправил ответ в игре «${game.name}» — результат: ${correct} из ${results.length}`,
       true,
     );
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
@@ -186,10 +192,23 @@ export class GameService {
   }
 
   // Родитель перезапускает игру: сбрасывает попытку ребёнка, чтобы тот мог
-  // пройти её заново с новым вариантом задания.
-  async restart(game: GameWithWords): Promise<void> {
+  // пройти её заново с новым вариантом задания (не повторяющим предыдущий тип).
+  async restart(game: GameWithWords, user: User): Promise<void> {
+    const latest = await this.games.findLatestAttempt(game.id);
+
+    if (latest) {
+      await this.games.updateLastTaskType(game.id, latest.taskType);
+    }
+
     await this.games.deleteAttempts(game.id);
+    await this.sessions.setStatus(game.sessionId, 'PENDING');
+    await this.chat.createMessage(game.sessionId, user.id, `Игра «${game.name}» перезапущена`, true);
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
+  }
+
+  private pickTaskType(exclude: number | null | undefined): number {
+    const candidates = [1, 2, 3, 4, 5].filter((type) => type !== exclude);
+    return candidates[Math.floor(Math.random() * candidates.length)]!;
   }
 
   private buildTask(game: GameWithWords, attempt: AttemptWithAnswers): GameTask {

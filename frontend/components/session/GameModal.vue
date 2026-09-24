@@ -395,32 +395,26 @@
             </button>
           </div>
         </div>
-
-        <div
-          v-if="task.attempt.status === 'ACTIVE'"
-          class="flex shrink-0 items-center justify-center pb-2 pt-6"
-        >
-          <button
-            type="button"
-            class="rounded-md bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-60"
-            :disabled="!allAnswered"
-            @click="submitAnswers"
-          >
-            Отправить
-          </button>
-        </div>
-
-        <div
-          v-else-if="task.attempt.status === 'SUBMITTED'"
-          class="shrink-0 pb-2 pt-6 text-center text-sm text-gray-400"
-        >
-          Ответы отправлены и ждут проверки родителем.
-        </div>
       </div>
 
       <div v-else class="py-16 text-center text-gray-500">
         Загрузка…
       </div>
+    </div>
+
+    <!-- Фиксированная нижняя панель: всегда видна, не скроллится -->
+    <div
+      v-if="view === 'play' && task?.attempt.status === 'ACTIVE'"
+      class="flex shrink-0 items-center justify-center border-t border-gray-800 bg-gray-900 px-4 py-4"
+    >
+      <button
+        type="button"
+        class="rounded-md bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-60"
+        :disabled="!allAnswered"
+        @click="submitAnswers"
+      >
+        Отправить
+      </button>
     </div>
   </div>
 </template>

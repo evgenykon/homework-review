@@ -108,7 +108,7 @@ export class GameController {
       throw request.server.httpErrors.notFound('Game not found');
     }
 
-    const task = await this.games.startAttempt(game);
+    const task = await this.games.startAttempt(game, user);
 
     if (!task) {
       throw request.server.httpErrors.badRequest('Game has no words');
@@ -168,7 +168,7 @@ export class GameController {
       throw request.server.httpErrors.notFound('Game not found');
     }
 
-    await this.games.restart(game);
+    await this.games.restart(game, user);
     reply.send({ ok: true });
   };
 

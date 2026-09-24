@@ -64,11 +64,12 @@ model ChatSession {
 }
 
 model Game {
-  id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  sessionId    String   @map("session_id")
+  name         String
+  lastTaskType Int?     @map("last_task_type")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   session  ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   words    GameWord[]

@@ -46,6 +46,18 @@
             <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
           </svg>
         </button>
+        <button
+          type="button"
+          class="icon-btn"
+          title="Игра"
+          @click="emit('toggleGame')"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M6 11h4m-2-2v4" />
+            <path d="M14 10h.01M17 13h.01" />
+            <path d="M17.32 5H6.68a4 4 0 00-3.98 3.6l-.7 7a3 3 0 005.7 1.4L8 19h8l.3-2a3 3 0 005.7-1.4l-.7-7A4 4 0 0017.32 5z" />
+          </svg>
+        </button>
 
         <div
           v-if="visiblePages.length || hiddenPages.length"
@@ -177,6 +189,7 @@ const emit = defineEmits<{
   capture: []
   toggleDrawing: []
   toggleCalculator: []
+  toggleGame: []
   selectPage: [id: string]
   deletePage: [id: string]
   toggleChat: []

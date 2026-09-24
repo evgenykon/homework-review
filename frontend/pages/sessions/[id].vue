@@ -68,6 +68,7 @@
           @capture="cameraInput?.click()"
           @toggle-drawing="drawingEnabled = !drawingEnabled"
           @toggle-calculator="calculatorOpen = true"
+          @toggle-game="gameOpen = true"
           @select-page="selectPage"
           @delete-page="deletePage"
           @toggle-chat="chatOpen = true"
@@ -137,6 +138,14 @@
     />
 
     <CalculatorModal v-if="calculatorOpen" @close="calculatorOpen = false" />
+
+    <GameModal
+      v-if="gameOpen"
+      :session-id="sessionId"
+      :is-parent="user?.type === 'parent'"
+      :game-version="gameVersion"
+      @close="gameOpen = false"
+    />
 
     <div
       v-if="reviewOpen"
@@ -253,6 +262,7 @@ const {
   refreshBooks,
   isPageFresh,
   markPageSeen,
+  gameVersion,
 } = useRoom(sessionId)
 
 await load()
@@ -265,6 +275,7 @@ const drawColor = ref('#000000')
 const drawMode = ref<'draw' | 'erase'>('draw')
 const chatOpen = ref(false)
 const calculatorOpen = ref(false)
+const gameOpen = ref(false)
 const viewerBook = ref<Book | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)

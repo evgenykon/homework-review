@@ -18,6 +18,12 @@ enum ReviewStatus {
   APPROVED
 }
 
+enum GameAttemptStatus {
+  ACTIVE
+  SUBMITTED
+  CHECKED
+}
+
 model Message {
   id        Int      @id @default(autoincrement())
   sessionId String   @map("session_id")
@@ -50,10 +56,70 @@ model ChatSession {
   pages    RoomPage[]
   reads    SessionRead[]
   books    SessionBook[]
+  games    Game[]
 
   @@index([childId])
   @@index([parentId])
   @@map("chat_sessions")
+}
+
+model Game {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  session  ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  words    GameWord[]
+  attempts GameAttempt[]
+
+  @@index([sessionId])
+  @@map("games")
+}
+
+model GameWord {
+  id       String @id @default(cuid())
+  gameId   String @map("game_id")
+  word     String
+  answer   String
+  position Int    @default(0)
+
+  game    Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  answers GameAnswer[]
+
+  @@index([gameId])
+  @@map("game_words")
+}
+
+model GameAttempt {
+  id        String            @id @default(cuid())
+  gameId    String            @map("game_id")
+  taskType  Int               @map("task_type")
+  status    GameAttemptStatus @default(ACTIVE)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  game    Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  answers GameAnswer[]
+
+  @@index([gameId])
+  @@map("game_attempts")
+}
+
+model GameAnswer {
+  id        String @id @default(cuid())
+  attemptId String @map("attempt_id")
+  wordId    String @map("word_id")
+  value     String
+  correct   Boolean @default(false)
+
+  attempt GameAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  word    GameWord    @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, wordId])
+  @@index([attemptId])
+  @@map("game_answers")
 }
 
 model SessionRead {

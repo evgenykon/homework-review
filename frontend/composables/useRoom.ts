@@ -78,6 +78,7 @@ export function useRoom(sessionId: string) {
   const books = ref<Book[]>([])
   const currentPageId = ref<string | null>(null)
   const connected = ref(false)
+  const gameVersion = ref(0)
 
   let socket: WebSocket | null = null
 
@@ -247,6 +248,8 @@ export function useRoom(sessionId: string) {
         await navigateTo('/dashboard')
       } else if (payload.type === 'session:books:changed') {
         void refreshBooks()
+      } else if (payload.type === 'game:changed') {
+        gameVersion.value++
       } else if (payload.type === 'notification' && payload.kind && payload.title && payload.body) {
         notify({
           kind: payload.kind,
@@ -421,5 +424,6 @@ export function useRoom(sessionId: string) {
     refreshBooks,
     isPageFresh,
     markPageSeen,
+    gameVersion,
   }
 }

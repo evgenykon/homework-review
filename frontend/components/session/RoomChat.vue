@@ -27,6 +27,14 @@
           class="py-1 text-center text-xs text-gray-500"
         >
           {{ message.body }}
+          <button
+            v-if="gameResult(message)"
+            type="button"
+            class="ml-2 rounded px-1.5 py-0.5 text-xs font-medium text-primary-400 underline transition-colors hover:text-primary-300"
+            @click="emit('openGameResult', gameResult(message)!)"
+          >
+            Открыть результат
+          </button>
         </p>
 
         <div
@@ -74,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatMessage } from '~/composables/useRoom'
+import type { ChatMessage, GameResultLink } from '~/composables/useRoom'
 
 const props = defineProps<{
   messages: ChatMessage[]
@@ -83,7 +91,25 @@ const props = defineProps<{
   archiveCutoff?: string | null
 }>()
 
-const emit = defineEmits<{ send: [body: string] }>()
+const emit = defineEmits<{
+  send: [body: string]
+  openGameResult: [link: GameResultLink]
+}>()
+
+const gameResult = (message: ChatMessage): GameResultLink | null => {
+  if (!message.data) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(message.data) as Partial<GameResultLink>
+    return parsed.type === 'game-result' && parsed.gameId && parsed.attemptId
+      ? { type: 'game-result', gameId: parsed.gameId, attemptId: parsed.attemptId }
+      : null
+  } catch {
+    return null
+  }
+}
 
 const draft = ref('')
 const scrollEl = ref<HTMLElement | null>(null)

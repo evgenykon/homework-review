@@ -13,6 +13,9 @@ export type GameMeta = {
   id: string;
   name: string;
   wordCount: number;
+  round: number;
+  attemptsLeft: number;
+  lastAttemptId: string | null;
   createdAt: string;
   updatedAt: string;
   attempt: { id: string; taskType: number; status: GameAttemptStatus } | null;
@@ -92,12 +95,17 @@ export class GameService {
 
     return Promise.all(
       games.map(async (game) => {
-        const attempt = await this.games.findLatestAttempt(game.id);
+        const attempt = await this.games.findLatestAttempt(game.id, game.round);
+        const attemptsUsed = await this.games.countAttemptsByRound(game.id, game.round);
+        const lastAttemptId = await this.games.findLastAttemptId(game.id);
 
         return {
           id: game.id,
           name: game.name,
           wordCount: game.words.length,
+          round: game.round,
+          attemptsLeft: Math.max(0, game.maxAttempts - attemptsUsed),
+          lastAttemptId,
           createdAt: game.createdAt.toISOString(),
           updatedAt: game.updatedAt.toISOString(),
           attempt: attempt ? { id: attempt.id, taskType: attempt.taskType, status: attempt.status } : null,
@@ -128,7 +136,7 @@ export class GameService {
   }
 
   async startAttempt(game: GameWithWords, user: User): Promise<GameTask | null> {
-    const latest = await this.games.findLatestAttempt(game.id);
+    const latest = await this.games.findLatestAttempt(game.id, game.round);
 
     if (latest && latest.status !== 'CHECKED') {
       return this.buildTask(game, latest);
@@ -138,18 +146,39 @@ export class GameService {
       return null;
     }
 
+    // Ребёнок может рестартить сам, пока не закончатся варианты (попытки) раунда.
+    const attemptsUsed = await this.games.countAttemptsByRound(game.id, game.round);
+
+    if (attemptsUsed >= game.maxAttempts) {
+      return null;
+    }
+
     const taskType = this.pickTaskType(game.lastTaskType);
-    const attempt = await this.games.createAttempt(game.id, taskType);
+    const attempt = await this.games.createAttempt(game.id, taskType, game.round);
     await this.games.updateLastTaskType(game.id, taskType);
-    await this.chat.createMessage(game.sessionId, user.id, `Ребёнок начал игру «${game.name}»`, true);
+
+    if (attemptsUsed === 0) {
+      await this.chat.createMessage(game.sessionId, user.id, `Ребёнок начал игру «${game.name}»`, true);
+    }
+
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
 
     return this.buildTask(game, attempt);
   }
 
   async getAttempt(game: GameWithWords): Promise<GameTask | null> {
-    const attempt = await this.games.findLatestAttempt(game.id);
+    const attempt = await this.games.findLatestAttempt(game.id, game.round);
     return attempt ? this.buildTask(game, attempt) : null;
+  }
+
+  async getAttemptById(game: GameWithWords, attemptId: string): Promise<GameTask | null> {
+    const attempt = await this.games.findAttemptById(attemptId);
+
+    if (!attempt || attempt.gameId !== game.id) {
+      return null;
+    }
+
+    return this.buildTask(game, attempt);
   }
 
   async submitAttempt(
@@ -157,7 +186,7 @@ export class GameService {
     user: User,
     answers: SubmitInput[],
   ): Promise<GameTask | null> {
-    const attempt = await this.games.findLatestAttempt(game.id);
+    const attempt = await this.games.findLatestAttempt(game.id, game.round);
 
     if (!attempt || attempt.status !== 'ACTIVE') {
       return null;
@@ -179,28 +208,25 @@ export class GameService {
 
     const correct = results.filter((result) => result.correct).length;
     await this.sessions.setStatus(game.sessionId, 'APPROVED');
+
+    // Каждое решение публикуется в чате как кликабельная ссылка на результат.
     await this.chat.createMessage(
       game.sessionId,
       user.id,
       `Ребёнок отправил ответ в игре «${game.name}» — результат: ${correct} из ${results.length}`,
       true,
+      JSON.stringify({ type: 'game-result', gameId: game.id, attemptId: attempt.id }),
     );
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
 
-    const updated = await this.games.findLatestAttempt(game.id);
+    const updated = await this.games.findLatestAttempt(game.id, game.round);
     return updated ? this.buildTask(game, updated) : null;
   }
 
-  // Родитель перезапускает игру: сбрасывает попытку ребёнка, чтобы тот мог
-  // пройти её заново с новым вариантом задания (не повторяющим предыдущий тип).
+  // Родитель перезапускает игру: начинается новый раунд. Старые попытки
+  // остаются (ссылки с результатами открываются), но для ребёнка не считаются.
   async restart(game: GameWithWords, user: User): Promise<void> {
-    const latest = await this.games.findLatestAttempt(game.id);
-
-    if (latest) {
-      await this.games.updateLastTaskType(game.id, latest.taskType);
-    }
-
-    await this.games.deleteAttempts(game.id);
+    await this.games.incrementRound(game.id);
     await this.sessions.setStatus(game.sessionId, 'PENDING');
     await this.chat.createMessage(game.sessionId, user.id, `Игра «${game.name}» перезапущена`, true);
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
@@ -237,6 +263,9 @@ export class GameService {
       id: game.id,
       name: game.name,
       wordCount: game.words.length,
+      round: game.round,
+      attemptsLeft: game.maxAttempts,
+      lastAttemptId: null,
       createdAt: game.createdAt.toISOString(),
       updatedAt: game.updatedAt.toISOString(),
       attempt: null,

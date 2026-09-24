@@ -7,7 +7,14 @@ export type ChatMessage = {
   senderId: string
   body: string
   system?: boolean
+  data?: string | null
   createdAt: string
+}
+
+export type GameResultLink = {
+  type: 'game-result'
+  gameId: string
+  attemptId: string
 }
 
 export type StrokePoint = {

@@ -67,6 +67,9 @@
                 <p v-if="game.attempt" class="mt-1 text-xs" :class="attemptStatusClass(game.attempt.status)">
                   {{ attemptStatusLabel(game.attempt.status) }}
                 </p>
+                <p v-if="!isParent" class="mt-1 text-xs text-gray-500">
+                  Осталось вариантов: {{ game.attemptsLeft }}
+                </p>
               </div>
 
               <div class="flex shrink-0 items-center gap-2">
@@ -77,6 +80,14 @@
                     @click="openEdit(game)"
                   >
                     Редактировать
+                  </button>
+                  <button
+                    v-if="game.lastAttemptId"
+                    type="button"
+                    class="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                    @click="emit('openResult', { gameId: game.id, attemptId: game.lastAttemptId! })"
+                  >
+                    Результат
                   </button>
                   <button
                     v-if="game.attempt"
@@ -119,6 +130,14 @@
                     @click="openPlay(game)"
                   >
                     Результаты
+                  </button>
+                  <button
+                    v-if="game.attemptsLeft > 0"
+                    type="button"
+                    class="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700"
+                    @click="startNewVariant(game)"
+                  >
+                    Ещё вариант
                   </button>
                 </template>
               </div>
@@ -226,8 +245,16 @@
               </span>
             </li>
           </ul>
-          <p class="text-sm text-gray-400">
-            Родитель может перезапустить игру.
+          <button
+            v-if="activeGame && activeGame.attemptsLeft > 0"
+            type="button"
+            class="rounded-md bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+            @click="startNewVariant(activeGame)"
+          >
+            Ещё вариант
+          </button>
+          <p v-else class="text-sm text-gray-400">
+            Варианты закончились. Родитель может перезапустить игру.
           </p>
         </div>
 
@@ -426,6 +453,9 @@ type GameMeta = {
   id: string
   name: string
   wordCount: number
+  round: number
+  attemptsLeft: number
+  lastAttemptId: string | null
   createdAt: string
   updatedAt: string
   attempt: { id: string; taskType: number; status: AttemptStatus } | null
@@ -446,7 +476,10 @@ const props = defineProps<{
   gameVersion: number
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{
+  close: []
+  openResult: [link: { gameId: string; attemptId: string }]
+}>()
 
 const games = ref<GameMeta[]>([])
 const view = ref<'list' | 'edit' | 'play'>('list')
@@ -694,6 +727,25 @@ const applyTask = (data: GameTask) => {
   answerWord.value = {}
 }
 
+const refreshActiveGame = async () => {
+  await load()
+  activeGame.value = games.value.find((game) => game.id === activeGame.value?.id) ?? null
+}
+
+const startNewVariant = async (game: GameMeta) => {
+  activeGame.value = game
+  view.value = 'play'
+  task.value = null
+
+  const started = await $fetch<GameTask>(`/api/games/${game.id}/attempts`, {
+    method: 'POST',
+    headers: requestHeaders,
+  })
+
+  applyTask(started)
+  await refreshActiveGame()
+}
+
 const backToList = () => {
   view.value = 'list'
   task.value = null
@@ -777,7 +829,7 @@ const submitAnswers = async () => {
   })
 
   task.value = updated
-  await load()
+  await refreshActiveGame()
 
   // После отправки ответов закрываем модалку — в чате появится системное
   // сообщение о том, что ответ отправлен на проверку.

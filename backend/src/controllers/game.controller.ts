@@ -108,10 +108,14 @@ export class GameController {
       throw request.server.httpErrors.notFound('Game not found');
     }
 
+    if (game.words.length === 0) {
+      throw request.server.httpErrors.badRequest('Game has no words');
+    }
+
     const task = await this.games.startAttempt(game, user);
 
     if (!task) {
-      throw request.server.httpErrors.badRequest('Game has no words');
+      throw request.server.httpErrors.conflict('No attempts left');
     }
 
     reply.send(task);
@@ -129,6 +133,26 @@ export class GameController {
     }
 
     reply.send(await this.games.getAttempt(game));
+  };
+
+  attemptById = async (
+    request: FastifyRequest<{ Params: { gameId: string; attemptId: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const user = await this.requireUser(request);
+    const game = await this.findAccessibleGame(request.params.gameId, user);
+
+    if (!game) {
+      throw request.server.httpErrors.notFound('Game not found');
+    }
+
+    const task = await this.games.getAttemptById(game, request.params.attemptId);
+
+    if (!task) {
+      throw request.server.httpErrors.notFound('Attempt not found');
+    }
+
+    reply.send(task);
   };
 
   submit = async (

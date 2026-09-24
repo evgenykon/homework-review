@@ -13,6 +13,7 @@ export class GameRoutes {
     app.delete('/games/:gameId', this.controller.remove);
 
     app.get('/games/:gameId/attempt', this.controller.attempt);
+    app.get('/games/:gameId/attempts/:attemptId', this.controller.attemptById);
     app.post('/games/:gameId/attempts', this.controller.start);
     app.post('/games/:gameId/attempt', this.controller.submit);
     app.post('/games/:gameId/restart', this.controller.restart);

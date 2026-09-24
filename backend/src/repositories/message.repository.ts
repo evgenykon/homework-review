@@ -5,6 +5,7 @@ export type CreateMessageData = {
   senderId: string;
   body: string;
   system?: boolean;
+  data?: string;
 };
 
 export class MessageRepository {

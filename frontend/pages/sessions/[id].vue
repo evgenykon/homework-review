@@ -92,6 +92,7 @@
             :current-user-id="user?.id"
             :archive-cutoff="archiveCutoff"
             @send="sendMessage"
+            @open-game-result="openGameResult"
           />
         </div>
       </aside>
@@ -122,6 +123,7 @@
       :archive-cutoff="archiveCutoff"
       @close="chatOpen = false"
       @send="sendMessage"
+      @open-game-result="openGameResult"
     >
       <SessionBooks
         :session-id="sessionId"
@@ -145,6 +147,14 @@
       :is-parent="user?.type === 'parent'"
       :game-version="gameVersion"
       @close="gameOpen = false"
+      @open-result="openResult"
+    />
+
+    <GameResultModal
+      v-if="resultAttemptId"
+      :game-id="resultGameId!"
+      :attempt-id="resultAttemptId"
+      @close="resultAttemptId = null"
     />
 
     <div
@@ -277,6 +287,19 @@ const chatOpen = ref(false)
 const calculatorOpen = ref(false)
 const gameOpen = ref(false)
 const viewerBook = ref<Book | null>(null)
+const resultGameId = ref<string | null>(null)
+const resultAttemptId = ref<string | null>(null)
+
+const openResult = (link: { gameId: string; attemptId: string }) => {
+  gameOpen.value = false
+  resultGameId.value = link.gameId
+  resultAttemptId.value = link.attemptId
+}
+
+const openGameResult = (link: { gameId: string; attemptId: string }) => {
+  resultGameId.value = link.gameId
+  resultAttemptId.value = link.attemptId
+}
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
 

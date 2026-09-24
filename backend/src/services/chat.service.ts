@@ -22,8 +22,9 @@ export class ChatService {
     senderId: string,
     body: string,
     system = false,
+    data?: string,
   ): Promise<Message> {
-    const message = await this.messages.create({ sessionId, senderId, body, system });
+    const message = await this.messages.create({ sessionId, senderId, body, system, data });
     this.realtime.broadcastToSession(sessionId, { type: 'message', message });
 
     const session = await this.sessions.findById(sessionId);

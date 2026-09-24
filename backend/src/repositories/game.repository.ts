@@ -74,25 +74,53 @@ export class GameRepository {
     return this.prisma.game.delete({ where: { id } });
   }
 
-  findLatestAttempt(gameId: string): Promise<AttemptWithAnswers | null> {
+  findLatestAttempt(gameId: string, round: number): Promise<AttemptWithAnswers | null> {
     return this.prisma.gameAttempt.findFirst({
-      where: { gameId },
+      where: { gameId, round },
       orderBy: { createdAt: 'desc' },
       include: { answers: { include: { word: true } } },
     });
   }
 
-  createAttempt(gameId: string, taskType: number): Promise<AttemptWithAnswers> {
-    return this.prisma.gameAttempt.create({
-      data: { gameId, taskType },
+  findAttemptById(attemptId: string): Promise<AttemptWithAnswers | null> {
+    return this.prisma.gameAttempt.findUnique({
+      where: { id: attemptId },
       include: { answers: { include: { word: true } } },
     });
   }
 
-  async updateLastTaskType(gameId: string, taskType: number): Promise<void> {
+  countAttemptsByRound(gameId: string, round: number): Promise<number> {
+    return this.prisma.gameAttempt.count({ where: { gameId, round } });
+  }
+
+  async findLastAttemptId(gameId: string): Promise<string | null> {
+    const last = await this.prisma.gameAttempt.findFirst({
+      where: { gameId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+
+    return last?.id ?? null;
+  }
+
+  createAttempt(gameId: string, taskType: number, round: number): Promise<AttemptWithAnswers> {
+    return this.prisma.gameAttempt.create({
+      data: { gameId, taskType, round },
+      include: { answers: { include: { word: true } } },
+    });
+  }
+
+  async updateLastTaskType(gameId: string, taskType: number | null): Promise<void> {
     await this.prisma.game.update({
       where: { id: gameId },
       data: { lastTaskType: taskType },
+    });
+  }
+
+  async incrementRound(gameId: string): Promise<void> {
+    await this.prisma.game.update({
+      where: { id: gameId },
+      data: { round: { increment: 1 }, lastTaskType: null },
     });
   }
 

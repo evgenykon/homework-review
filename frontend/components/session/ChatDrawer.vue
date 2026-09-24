@@ -23,6 +23,7 @@
           :current-user-id="currentUserId"
           :archive-cutoff="archiveCutoff"
           @send="emit('send', $event)"
+          @open-game-result="emit('openGameResult', $event)"
         />
       </div>
     </div>
@@ -30,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatMessage } from '~/composables/useRoom'
+import type { ChatMessage, GameResultLink } from '~/composables/useRoom'
 
 defineProps<{
   open: boolean
@@ -43,5 +44,6 @@ defineProps<{
 const emit = defineEmits<{
   close: []
   send: [body: string]
+  openGameResult: [link: GameResultLink]
 }>()
 </script>

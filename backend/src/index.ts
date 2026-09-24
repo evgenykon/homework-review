@@ -16,6 +16,7 @@ import { HealthController } from './controllers/health.controller';
 import { InviteController } from './controllers/invite.controller';
 import { PageController } from './controllers/page.controller';
 import { GameController } from './controllers/game.controller';
+import { ScheduleController } from './controllers/schedule.controller';
 import { SessionBookController } from './controllers/session-book.controller';
 import { SocketHandler } from './handlers/socket.handler';
 import { ChatSessionRepository } from './repositories/chat-session.repository';
@@ -26,6 +27,7 @@ import { MessageRepository } from './repositories/message.repository';
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { RoomPageRepository } from './repositories/room-page.repository';
 import { GameRepository } from './repositories/game.repository';
+import { ScheduleRepository } from './repositories/schedule.repository';
 import { SessionBookRepository } from './repositories/session-book.repository';
 import { SessionReadRepository } from './repositories/session-read.repository';
 import { SessionRepository } from './repositories/session.repository';
@@ -39,6 +41,7 @@ import { HealthRoutes } from './routes/health.routes';
 import { InviteRoutes } from './routes/invite.routes';
 import { PageRoutes } from './routes/page.routes';
 import { GameRoutes } from './routes/game.routes';
+import { ScheduleRoutes } from './routes/schedule.routes';
 import { SessionBookRoutes } from './routes/session-book.routes';
 import { WsRoutes } from './routes/ws.routes';
 import { AuthService } from './services/auth.service';
@@ -50,6 +53,7 @@ import { HealthService } from './services/health.service';
 import { InviteService } from './services/invite.service';
 import { PageService } from './services/page.service';
 import { GameService } from './services/game.service';
+import { ScheduleService } from './services/schedule.service';
 import { RealtimeService } from './services/realtime.service';
 import { SessionBookService } from './services/session-book.service';
 import { StorageService } from './services/storage.service';
@@ -82,6 +86,7 @@ const chatSessionRepository = new ChatSessionRepository(prisma);
 const sessionReadRepository = new SessionReadRepository(prisma);
 const roomPageRepository = new RoomPageRepository(prisma);
 const gameRepository = new GameRepository(prisma);
+const scheduleRepository = new ScheduleRepository(prisma);
 const strokeRepository = new StrokeRepository(prisma);
 const userRepository = new UserRepository(prisma);
 const oauthAccountRepository = new OAuthAccountRepository(prisma);
@@ -114,6 +119,7 @@ const chatSessionService = new ChatSessionService(
   realtime,
 );
 const gameService = new GameService(gameRepository, realtime, chatService, chatSessionService);
+const scheduleService = new ScheduleService(scheduleRepository);
 const pageService = new PageService(
   storageService,
   roomPageRepository,
@@ -138,6 +144,7 @@ const bookController = new BookController(bookService, authService);
 const chatController = new ChatController(chatSessionService, chatService, authService);
 const pageController = new PageController(pageService, chatSessionService, authService);
 const gameController = new GameController(gameService, chatSessionService, authService);
+const scheduleController = new ScheduleController(scheduleService, authService);
 const sessionBookController = new SessionBookController(
   sessionBookService,
   chatSessionService,
@@ -157,6 +164,7 @@ await server.register(
     new ChatRoutes(chatController).register(api);
     new PageRoutes(pageController).register(api);
     new GameRoutes(gameController).register(api);
+    new ScheduleRoutes(scheduleController).register(api);
     new BookRoutes(bookController).register(api);
     new SessionBookRoutes(sessionBookController).register(api);
   },

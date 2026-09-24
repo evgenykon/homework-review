@@ -123,6 +123,11 @@
       </NuxtLink>
     </div>
 
+    <ScheduleCard
+      v-if="user?.type === 'parent'"
+      :is-parent="user?.type === 'parent'"
+    />
+
     <div v-if="user?.type === 'parent'" class="app-card space-y-3">
       <h2 class="text-lg font-semibold text-gray-100">
         Дети

@@ -223,9 +223,22 @@ model User {
   messages       Message[]     @relation("MessageSender")
   sessionReads   SessionRead[]
   books          Book[]        @relation("BookOwner")
+  schedule       Schedule?
 
   @@index([parentId])
   @@map("users")
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  ownerId   String   @unique @map("owner_id")
+  days      Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("schedules")
 }
 
 model OAuthAccount {

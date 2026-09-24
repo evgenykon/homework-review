@@ -122,8 +122,4 @@ export class GameRepository {
   async deleteAttempts(gameId: string): Promise<void> {
     await this.prisma.gameAttempt.deleteMany({ where: { gameId } });
   }
-
-  async deleteAttempt(attemptId: string): Promise<void> {
-    await this.prisma.gameAttempt.deleteMany({ where: { id: attemptId } });
-  }
 }

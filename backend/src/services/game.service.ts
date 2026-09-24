@@ -163,7 +163,16 @@ export class GameService {
     const filtered = answers.filter((answer) => validWordIds.has(answer.wordId));
 
     await this.games.saveAnswers(attempt.id, filtered);
-    await this.games.setAttemptStatus(attempt.id, 'SUBMITTED');
+
+    // Проверка происходит автоматически сразу после отправки.
+    const byWord = new Map(game.words.map((word) => [word.id, word.answer]));
+    const results = filtered.map((answer) => ({
+      wordId: answer.wordId,
+      correct: normalize(answer.value) === normalize(byWord.get(answer.wordId) ?? ''),
+    }));
+    await this.games.markAnswersCorrect(attempt.id, results);
+    await this.games.setAttemptStatus(attempt.id, 'CHECKED');
+
     await this.chat.createMessage(
       game.sessionId,
       user.id,
@@ -176,35 +185,11 @@ export class GameService {
     return updated ? this.buildTask(game, updated) : null;
   }
 
-  async checkAttempt(game: GameWithWords): Promise<GameTask | null> {
-    const attempt = await this.games.findLatestAttempt(game.id);
-
-    if (!attempt || attempt.status !== 'SUBMITTED') {
-      return null;
-    }
-
-    const byWord = new Map(game.words.map((word) => [word.id, word.answer]));
-    const results = attempt.answers.map((answer) => ({
-      wordId: answer.wordId,
-      correct: normalize(answer.value) === normalize(byWord.get(answer.wordId) ?? ''),
-    }));
-
-    await this.games.markAnswersCorrect(attempt.id, results);
-    await this.games.setAttemptStatus(attempt.id, 'CHECKED');
+  // Родитель перезапускает игру: сбрасывает попытку ребёнка, чтобы тот мог
+  // пройти её заново с новым вариантом задания.
+  async restart(game: GameWithWords): Promise<void> {
+    await this.games.deleteAttempts(game.id);
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
-
-    const updated = await this.games.findLatestAttempt(game.id);
-    return updated ? this.buildTask(game, updated) : null;
-  }
-
-  async restart(game: GameWithWords): Promise<GameTask | null> {
-    const latest = await this.games.findLatestAttempt(game.id);
-
-    if (latest) {
-      await this.games.deleteAttempt(latest.id);
-    }
-
-    return this.startAttempt(game);
   }
 
   private buildTask(game: GameWithWords, attempt: AttemptWithAnswers): GameTask {

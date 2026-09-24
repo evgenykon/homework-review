@@ -79,12 +79,12 @@
                     Редактировать
                   </button>
                   <button
-                    v-if="game.attempt?.status === 'SUBMITTED'"
+                    v-if="game.attempt"
                     type="button"
                     class="rounded-md bg-yellow-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-yellow-500"
-                    @click="checkGame(game)"
+                    @click="restartGame(game)"
                   >
-                    Проверить
+                    Рестарт
                   </button>
                   <button
                     type="button"
@@ -122,32 +122,6 @@
                   </button>
                 </template>
               </div>
-            </div>
-
-            <div
-              v-if="resultsGameId === game.id && checkedTask"
-              class="mt-3 border-t border-gray-700/60 pt-3"
-            >
-              <p class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                Результаты проверки
-              </p>
-              <ul class="flex flex-col gap-1.5">
-                <li
-                  v-for="word in checkedTask.words"
-                  :key="word.id"
-                  class="flex flex-wrap items-center gap-2 text-sm"
-                >
-                  <span class="text-gray-300">{{ word.word }}</span>
-                  <span class="text-gray-500">—</span>
-                  <span class="text-gray-200">{{ word.answer }}</span>
-                  <span
-                    class="rounded-full px-2 py-0.5 text-xs font-medium"
-                    :class="answerCorrectClass(word.id)"
-                  >
-                    {{ answerCorrectLabel(word.id) }}
-                  </span>
-                </li>
-              </ul>
             </div>
           </div>
         </div>
@@ -252,13 +226,9 @@
               </span>
             </li>
           </ul>
-          <button
-            type="button"
-            class="rounded-md bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-            @click="startAgain"
-          >
-            Начать заново
-          </button>
+          <p class="text-sm text-gray-400">
+            Родитель может перезапустить игру.
+          </p>
         </div>
 
         <div
@@ -482,8 +452,6 @@ const draft = ref<{ id: string | null; name: string; words: WordRow[] }>({
 
 const activeGame = ref<GameMeta | null>(null)
 const task = ref<GameTask | null>(null)
-const resultsGameId = ref<string | null>(null)
-const checkedTask = ref<GameTask | null>(null)
 
 const answers = ref<Record<string, string>>({})
 const answerDraft = ref('')
@@ -549,12 +517,12 @@ const answerValue = (wordId: string) => {
 }
 
 const answerCorrectLabel = (wordId: string) => {
-  const answer = checkedTask.value?.answers.find((item) => item.wordId === wordId)
+  const answer = task.value?.answers.find((item) => item.wordId === wordId)
   return answer?.correct ? 'Верно' : 'Неверно'
 }
 
 const answerCorrectClass = (wordId: string) => {
-  const answer = checkedTask.value?.answers.find((item) => item.wordId === wordId)
+  const answer = task.value?.answers.find((item) => item.wordId === wordId)
   return answer?.correct
     ? 'bg-green-600/20 text-green-300'
     : 'bg-red-600/20 text-red-300'
@@ -670,14 +638,11 @@ const removeGame = async (game: GameMeta) => {
   await load()
 }
 
-const checkGame = async (game: GameMeta) => {
-  const taskData = await $fetch<GameTask>(`/api/games/${game.id}/check`, {
+const restartGame = async (game: GameMeta) => {
+  await $fetch(`/api/games/${game.id}/restart`, {
     method: 'POST',
     headers: requestHeaders,
   })
-
-  checkedTask.value = taskData
-  resultsGameId.value = game.id
   await load()
 }
 
@@ -801,20 +766,6 @@ const submitAnswers = async () => {
   // После отправки ответов закрываем модалку — в чате появится системное
   // сообщение о том, что ответ отправлен на проверку.
   emit('close')
-}
-
-const startAgain = async () => {
-  if (!activeGame.value) {
-    return
-  }
-
-  const started = await $fetch<GameTask>(`/api/games/${activeGame.value.id}/restart`, {
-    method: 'POST',
-    headers: requestHeaders,
-  })
-
-  applyTask(started)
-  await load()
 }
 
 watch(

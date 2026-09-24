@@ -16,6 +16,5 @@ export class GameRoutes {
     app.post('/games/:gameId/attempts', this.controller.start);
     app.post('/games/:gameId/attempt', this.controller.submit);
     app.post('/games/:gameId/restart', this.controller.restart);
-    app.post('/games/:gameId/check', this.controller.check);
   }
 }

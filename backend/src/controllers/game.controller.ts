@@ -161,26 +161,6 @@ export class GameController {
     request: FastifyRequest<{ Params: { gameId: string } }>,
     reply: FastifyReply,
   ): Promise<void> => {
-    const user = await this.requireChild(request);
-    const game = await this.findAccessibleGame(request.params.gameId, user);
-
-    if (!game) {
-      throw request.server.httpErrors.notFound('Game not found');
-    }
-
-    const task = await this.games.restart(game);
-
-    if (!task) {
-      throw request.server.httpErrors.badRequest('Game has no words');
-    }
-
-    reply.send(task);
-  };
-
-  check = async (
-    request: FastifyRequest<{ Params: { gameId: string } }>,
-    reply: FastifyReply,
-  ): Promise<void> => {
     const user = await this.requireParent(request);
     const game = await this.findAccessibleGame(request.params.gameId, user);
 
@@ -188,13 +168,8 @@ export class GameController {
       throw request.server.httpErrors.notFound('Game not found');
     }
 
-    const task = await this.games.checkAttempt(game);
-
-    if (!task) {
-      throw request.server.httpErrors.conflict('Nothing to check');
-    }
-
-    reply.send(task);
+    await this.games.restart(game);
+    reply.send({ ok: true });
   };
 
   private parseWords(raw: unknown): { word: string; answer: string }[] {

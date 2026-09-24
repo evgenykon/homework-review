@@ -19,7 +19,7 @@ export type GameMeta = {
 
 export type GameTask = {
   attempt: { id: string; taskType: number; status: GameAttemptStatus };
-  words: { id: string; word: string; answer?: string }[];
+  words: { id: string; word: string; answer?: string; hint?: string }[];
   options: string[];
   answers: { wordId: string; value: string; correct?: boolean }[];
 };
@@ -197,8 +197,9 @@ export class GameService {
       attempt: { id: attempt.id, taskType: attempt.taskType, status: attempt.status },
       words: game.words.map((word) => ({
         id: word.id,
-        word: attempt.taskType === 2 ? maskWord(word.word) : word.word,
+        word: word.word,
         answer: attempt.status === 'CHECKED' ? word.answer : undefined,
+        hint: attempt.taskType === 2 ? maskWord(word.answer) : undefined,
       })),
       options:
         attempt.taskType >= 3

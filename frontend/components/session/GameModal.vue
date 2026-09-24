@@ -339,6 +339,12 @@
               <p class="text-3xl font-semibold text-gray-100">
                 {{ currentWord?.word }}
               </p>
+              <p
+                v-if="task.attempt.taskType === 2 && currentWord?.hint"
+                class="rounded-md bg-gray-800/60 px-4 py-2 text-xl tracking-[0.35em] text-gray-300"
+              >
+                {{ currentWord.hint }}
+              </p>
 
               <template v-if="task.attempt.taskType === 3">
                 <div class="flex max-w-sm flex-wrap justify-center gap-2">
@@ -433,7 +439,7 @@ type GameMeta = {
 
 type GameTask = {
   attempt: { id: string; taskType: number; status: AttemptStatus }
-  words: { id: string; word: string; answer?: string }[]
+  words: { id: string; word: string; answer?: string; hint?: string }[]
   options: string[]
   answers: { wordId: string; value: string; correct?: boolean }[]
 }

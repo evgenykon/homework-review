@@ -246,13 +246,18 @@
                   v-for="word in task.words"
                   :key="word.id"
                   type="button"
-                  class="rounded-md px-3 py-2 text-sm transition-colors"
+                  class="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors"
                   :class="selectedWord === word.id
                     ? 'bg-primary-600 text-white'
-                    : 'bg-gray-800 text-gray-100 hover:bg-gray-700'"
+                    : matchedAnswer(word.id)
+                      ? 'bg-green-800 text-white'
+                      : 'bg-gray-800 text-gray-100 hover:bg-gray-700'"
                   @click="selectWord(word.id)"
                 >
-                  {{ word.word }}
+                  <span>{{ word.word }}</span>
+                  <span v-if="matchedAnswer(word.id)" class="ml-2 text-xs text-green-100">
+                    → {{ matchedAnswer(word.id) }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -265,13 +270,16 @@
                   v-for="option in task.options"
                   :key="option"
                   type="button"
-                  class="rounded-md px-3 py-2 text-sm transition-colors"
-                  :class="matchedAnswers[option] === selectedWord
+                  class="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors"
+                  :class="matchedAnswers[option]
                     ? 'bg-green-700 text-white'
                     : 'bg-gray-800 text-gray-100 hover:bg-gray-700'"
                   @click="matchAnswer(option)"
                 >
-                  {{ option }}
+                  <span>{{ option }}</span>
+                  <span v-if="matchedWordId(option)" class="ml-2 text-xs text-green-100">
+                    → {{ wordName(matchedWordId(option)!) }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -537,6 +545,14 @@ const answerForWord = (wordId: string | undefined) => {
 
 const wordUsedByAnswer = (wordId: string) =>
   Object.values(answerWord.value).includes(wordId)
+
+const matchedWordId = (option: string) => matchedAnswers.value[option] ?? undefined
+
+const matchedAnswer = (wordId: string) =>
+  task.value?.options.find((option) => matchedAnswers.value[option] === wordId)
+
+const wordName = (wordId: string) =>
+  task.value?.words.find((word) => word.id === wordId)?.word ?? ''
 
 const attemptStatusLabel = (status: AttemptStatus) => {
   switch (status) {

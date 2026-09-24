@@ -1,4 +1,4 @@
-import type { PrismaClient, Schedule } from '../../generated/prisma/client';
+import type { Prisma, PrismaClient, Schedule } from '../../generated/prisma/client';
 
 export class ScheduleRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -7,7 +7,7 @@ export class ScheduleRepository {
     return this.prisma.schedule.findUnique({ where: { ownerId } });
   }
 
-  upsert(ownerId: string, days: string[]): Promise<Schedule> {
+  upsert(ownerId: string, days: Prisma.InputJsonValue): Promise<Schedule> {
     return this.prisma.schedule.upsert({
       where: { ownerId },
       create: { ownerId, days },

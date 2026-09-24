@@ -20,14 +20,12 @@ export class ScheduleController {
     reply: FastifyReply,
   ): Promise<void> => {
     const user = await this.requireParent(request);
-    const raw = Array.isArray(request.body?.days) ? request.body.days : [];
-    const days = raw.filter((item): item is string => typeof item === 'string');
 
-    if (days.length !== 7) {
-      throw request.server.httpErrors.badRequest('days must have 7 entries');
+    if (!Array.isArray(request.body?.days)) {
+      throw request.server.httpErrors.badRequest('days is required');
     }
 
-    reply.send(await this.schedules.update(user.id, days));
+    reply.send(await this.schedules.update(user.id, request.body.days));
   };
 
   private async requireUser(request: FastifyRequest): Promise<User> {

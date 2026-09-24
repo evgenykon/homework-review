@@ -105,7 +105,7 @@ const bookService = new BookService(
   realtime,
 );
 const sessionBookService = new SessionBookService(sessionBookRepository, bookRepository, realtime);
-const gameService = new GameService(gameRepository, realtime);
+const gameService = new GameService(gameRepository, realtime, chatService);
 const chatSessionService = new ChatSessionService(
   chatSessionRepository,
   userRepository,

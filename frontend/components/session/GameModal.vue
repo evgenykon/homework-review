@@ -797,6 +797,10 @@ const submitAnswers = async () => {
 
   task.value = updated
   await load()
+
+  // После отправки ответов закрываем модалку — в чате появится системное
+  // сообщение о том, что ответ отправлен на проверку.
+  emit('close')
 }
 
 const startAgain = async () => {

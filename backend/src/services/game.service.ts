@@ -5,6 +5,7 @@ import type {
   GameWithWords,
   WordInput,
 } from '../repositories/game.repository';
+import type { ChatService } from './chat.service';
 import type { RealtimeService } from './realtime.service';
 
 export type GameMeta = {
@@ -65,6 +66,7 @@ export class GameService {
   constructor(
     private readonly games: GameRepository,
     private readonly realtime: RealtimeService,
+    private readonly chat: ChatService,
   ) {}
 
   byId(id: string): Promise<GameWithWords | null> {
@@ -146,7 +148,11 @@ export class GameService {
     return attempt ? this.buildTask(game, attempt) : null;
   }
 
-  async submitAttempt(game: GameWithWords, answers: SubmitInput[]): Promise<GameTask | null> {
+  async submitAttempt(
+    game: GameWithWords,
+    user: User,
+    answers: SubmitInput[],
+  ): Promise<GameTask | null> {
     const attempt = await this.games.findLatestAttempt(game.id);
 
     if (!attempt || attempt.status !== 'ACTIVE') {
@@ -158,6 +164,12 @@ export class GameService {
 
     await this.games.saveAnswers(attempt.id, filtered);
     await this.games.setAttemptStatus(attempt.id, 'SUBMITTED');
+    await this.chat.createMessage(
+      game.sessionId,
+      user.id,
+      `Ответ в игре «${game.name}» отправлен на проверку`,
+      true,
+    );
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
 
     const updated = await this.games.findLatestAttempt(game.id);

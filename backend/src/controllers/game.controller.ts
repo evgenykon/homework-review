@@ -148,7 +148,7 @@ export class GameController {
       throw request.server.httpErrors.badRequest('answer every word');
     }
 
-    const task = await this.games.submitAttempt(game, answers);
+    const task = await this.games.submitAttempt(game, user, answers);
 
     if (!task) {
       throw request.server.httpErrors.conflict('Attempt is not active');

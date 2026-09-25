@@ -32,6 +32,7 @@
             {{ user.type === 'parent' ? 'Родитель' : 'Ребёнок' }}
             <template v-if="user.age !== null"> · {{ user.age }} лет</template>
           </p>
+          <p class="mt-0.5 text-xs text-gray-500">ID: {{ user.id }}</p>
         </div>
       </div>
 

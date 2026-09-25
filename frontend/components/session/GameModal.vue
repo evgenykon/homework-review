@@ -170,12 +170,18 @@
             <input
               v-model="row.word"
               type="text"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
               class="w-1/2 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 outline-none focus:border-primary-500"
               placeholder="Слово"
             >
             <input
               v-model="row.answer"
               type="text"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
               class="w-1/2 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 outline-none focus:border-primary-500"
               placeholder="Правильный ответ"
             >
@@ -394,6 +400,11 @@
                 <input
                   v-model="answerDraft"
                   type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  name="game-answer"
                   class="w-64 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-center text-lg text-gray-100 outline-none focus:border-primary-500"
                   :disabled="task.attempt.status === 'SUBMITTED'"
                   placeholder="Твой ответ"

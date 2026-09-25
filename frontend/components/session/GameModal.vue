@@ -210,8 +210,8 @@
       </div>
 
       <!-- Прохождение игры (ребёнок) -->
-      <div v-else-if="view === 'play' && task" class="mx-auto flex min-h-full max-w-3xl flex-col p-6">
-        <p class="mb-4 text-center text-sm text-gray-400">
+      <div v-else-if="view === 'play' && task" class="mx-auto flex min-h-full max-w-3xl flex-col p-4">
+        <p class="mb-2 text-center text-sm text-gray-400">
           {{ taskName }}
         </p>
 
@@ -359,11 +359,11 @@
 
           <!-- Типы 1-3: по одному слову -->
           <template v-else>
-            <div class="flex flex-1 flex-col items-center justify-center gap-6">
+            <div class="flex flex-1 flex-col items-center justify-center gap-3">
               <p class="text-sm text-gray-400">
                 {{ currentIndex + 1 }} / {{ task.words.length }}
               </p>
-              <p class="text-3xl font-semibold text-gray-100">
+              <p class="text-2xl font-semibold text-gray-100">
                 {{ currentWord?.word }}
               </p>
               <p
@@ -403,7 +403,7 @@
             </div>
           </template>
 
-          <div class="mt-6 flex items-center justify-center gap-3">
+          <div class="mt-3 flex items-center justify-center gap-3">
             <button
               v-if="task.attempt.taskType <= 3 && currentIndex > 0"
               type="button"
@@ -436,8 +436,7 @@
     >
       <button
         type="button"
-        class="rounded-md bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-60"
-        :disabled="!allAnswered"
+        class="rounded-md bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-500"
         @click="submitAnswers"
       >
         Отправить
@@ -529,24 +528,6 @@ const canSaveEdit = computed(
     draft.value.words.length > 0 &&
     draft.value.words.every((row) => row.word.trim() !== '' && row.answer.trim() !== ''),
 )
-
-const allAnswered = computed(() => {
-  if (!task.value) {
-    return false
-  }
-
-  const type = task.value.attempt.taskType
-
-  if (type === 4) {
-    return task.value.words.every((word) => Object.values(matchedAnswers.value).includes(word.id))
-  }
-
-  if (type === 5) {
-    return task.value.options.every((option) => answerWord.value[option])
-  }
-
-  return task.value.words.every((word) => answers.value[word.id]?.trim())
-})
 
 const correctCount = computed(
   () => task.value?.answers.filter((answer) => answer.correct).length ?? 0,
@@ -811,9 +792,19 @@ const buildAnswers = () => {
       .map((option) => ({ wordId: answerWord.value[option], value: option }))
   }
 
+  // Для типов с вводом текста учитываем текущий ввод даже на последнем слове
+  // (там нет кнопки «Далее», которая сохраняет draft в answers).
+  const effectiveValue = (wordId: string) => {
+    const saved = answers.value[wordId]
+    if (saved) {
+      return saved
+    }
+    return currentWord.value?.id === wordId ? answerDraft.value : ''
+  }
+
   return task.value.words.map((word) => ({
     wordId: word.id,
-    value: answers.value[word.id] ?? '',
+    value: effectiveValue(word.id),
   }))
 }
 

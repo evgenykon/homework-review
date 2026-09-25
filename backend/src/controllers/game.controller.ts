@@ -168,10 +168,6 @@ export class GameController {
 
     const answers = this.parseAnswers(request.body?.answers);
 
-    if (answers.length !== game.words.length) {
-      throw request.server.httpErrors.badRequest('answer every word');
-    }
-
     const task = await this.games.submitAttempt(game, user, answers);
 
     if (!task) {

@@ -196,13 +196,23 @@ export class GameService {
     }
 
     const validWordIds = new Set(game.words.map((word) => word.id));
-    const filtered = answers.filter((answer) => validWordIds.has(answer.wordId));
+    const provided = new Map(
+      answers
+        .filter((answer) => validWordIds.has(answer.wordId))
+        .map((answer) => [answer.wordId, answer.value]),
+    );
 
-    await this.games.saveAnswers(attempt.id, filtered);
+    // Заполняем все слова (пропущенные — пустые, они считаются неверными).
+    const fullAnswers = game.words.map((word) => ({
+      wordId: word.id,
+      value: provided.get(word.id) ?? '',
+    }));
+
+    await this.games.saveAnswers(attempt.id, fullAnswers);
 
     // Проверка происходит автоматически сразу после отправки.
     const byWord = new Map(game.words.map((word) => [word.id, word.answer]));
-    const results = filtered.map((answer) => ({
+    const results = fullAnswers.map((answer) => ({
       wordId: answer.wordId,
       correct: normalize(answer.value) === normalize(byWord.get(answer.wordId) ?? ''),
     }));

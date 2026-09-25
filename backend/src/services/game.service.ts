@@ -30,6 +30,9 @@ export type GameTask = {
 
 export type SubmitInput = { wordId: string; value: string };
 
+// Типы заданий от простого к сложному: 5 (подсказки) → 1 (самый сложный).
+const EASY_TO_HARD = [5, 4, 3, 2, 1];
+
 function shuffle<T>(items: T[]): T[] {
   const result = [...items];
 
@@ -153,9 +156,9 @@ export class GameService {
       return null;
     }
 
-    const taskType = this.pickTaskType(game.lastTaskType);
+    // Ребёнок проходит варианты по порядку: от простого к сложному.
+    const taskType = EASY_TO_HARD[attemptsUsed]!;
     const attempt = await this.games.createAttempt(game.id, taskType, game.round);
-    await this.games.updateLastTaskType(game.id, taskType);
 
     if (attemptsUsed === 0) {
       await this.chat.createMessage(game.sessionId, user.id, `Ребёнок начал игру «${game.name}»`, true);
@@ -230,11 +233,6 @@ export class GameService {
     await this.sessions.setStatus(game.sessionId, 'PENDING');
     await this.chat.createMessage(game.sessionId, user.id, `Игра «${game.name}» перезапущена`, true);
     this.realtime.broadcastToSession(game.sessionId, { type: 'game:changed', gameId: game.id });
-  }
-
-  private pickTaskType(exclude: number | null | undefined): number {
-    const candidates = [1, 2, 3, 4, 5].filter((type) => type !== exclude);
-    return candidates[Math.floor(Math.random() * candidates.length)]!;
   }
 
   private buildTask(game: GameWithWords, attempt: AttemptWithAnswers): GameTask {
